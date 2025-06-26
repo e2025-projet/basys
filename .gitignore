@@ -18,8 +18,9 @@
 *.production
 *.debug
 html/
-nbproject/private/
-nbproject/Package-*.bash
+projet_mplab.X/nbproject/private/private.xml
+projet_mplab.X/nbproject/private/*
+projet_mplab.X/nbproject/Package-*.bash
 build/
 nbbuild/
 dist/
@@ -27,6 +28,6 @@ nbdist/
 nbactions.xml
 nb-configuration.xml
 funclist
-nbproject/Makefile-*
+projet_mplab.X/nbproject/Makefile-*
 disassembly/
 .generated_files/
