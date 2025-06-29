@@ -63,6 +63,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "ssd.h"
 #include "accel.h"
 #include "lcd.h"
+#include "adc.h"
 #include "app_commands.h"
 
 
@@ -111,18 +112,6 @@ MAIN_DATA mainData;
 
 int Intense[3];
 int Last_Intense[3];
-
-/* Application's LED Task Function 
- Fonction qui fait clignoter une LED la LED1 à chaque 20000 execution du code
- */
-static unsigned long int counter=0;
-static void LedTask(void) 
-{
-    if(counter++ == 20000){
-        LED_ToggleValue(1);
-        counter = 0;
-    }  
-}
 
 void Interupt_ACL_Init(void)
 {
@@ -213,13 +202,14 @@ void MAIN_Initialize ( void )
 
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LCD_Init(); // Initialisation de l'écran LCD
-    ACL_Init(); // Initialisation de l'accéléromètre
+//    ACL_Init(); // Initialisation de l'accéléromètre
     SSD_Init(); // Initialisation du Timer4 et de l'accéléromètre
-    Interupt_ACL_Init(); //Initialisation de l'interuption de l'accéléromètre
+//    Interupt_ACL_Init(); //Initialisation de l'interuption de l'accéléromètre
     RGBLED_Init();
+    LED_Init(); // Initialisation des LEDs
     Init_GestionDonnees();
-    //initialize_timer_interrupt();
-    //macro_enable_interrupts();
+    Initialize_ADC_Microphone();
+    macro_enable_interrupts();
     
 }
 
@@ -266,13 +256,10 @@ void MAIN_Tasks ( void )
 
         case MAIN_STATE_SERVICE_TASKS:
         {
-            LedTask(); //toggle LED1 à tout les 500000 cycles
-            accel_tasks(); // 
             RGB_Task();
             UDP_Tasks();
             ManageSwitches();
         	JB1Toggle();
-            LED0Toggle();
             break;
         }
 
@@ -290,7 +277,9 @@ int main(void) {
     SYS_Initialize(NULL);
     MAIN_Initialize();
     SYS_INT_Enable();
-    SSD_WriteDigitsGrouped(0xFA9B,0x1);
+    SSD_WriteDigitsGrouped(0x1010,0x0);
+    LCD_WriteStringAtPos("Projet S4: ANC", 0, 0);
+    
     
     while (1) {
         SYS_Tasks();

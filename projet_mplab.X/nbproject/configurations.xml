@@ -12,6 +12,7 @@
           <itemPath>../src/i2c.h</itemPath>
           <itemPath>../src/lcd.h</itemPath>
           <itemPath>../src/rgbled.h</itemPath>
+          <itemPath>../src/adc.h</itemPath>
         </logicalFolder>
         <logicalFolder name="f1" displayName="system_config" projectFiles="true">
           <logicalFolder name="f1" displayName="default" projectFiles="true">
@@ -211,6 +212,8 @@
           <itemPath>../src/i2c.c</itemPath>
           <itemPath>../src/lcd.c</itemPath>
           <itemPath>../src/rgbled.c</itemPath>
+          <itemPath>../src/spi_i2s.c</itemPath>
+          <itemPath>../src/adc.c</itemPath>
         </logicalFolder>
         <logicalFolder name="f1" displayName="system_config" projectFiles="true">
           <logicalFolder name="f1" displayName="default" projectFiles="true">
@@ -372,7 +375,7 @@
         <targetDevice>PIC32MX370F512L</targetDevice>
         <targetHeader></targetHeader>
         <targetPluginBoard></targetPluginBoard>
-        <platformTool>noID</platformTool>
+        <platformTool>PK3OBPlatformTool</platformTool>
         <languageToolchain>XC32</languageToolchain>
         <languageToolchainVersion>2.50</languageToolchainVersion>
         <platform>3</platform>
@@ -642,6 +645,7 @@
         <property key="ToolFirmwareFilePath"
                   value="Press to browse for a specific firmware version"/>
         <property key="ToolFirmwareOption.UseLatestFirmware" value="true"/>
+        <property key="firmware.download.all" value="false"/>
         <property key="memories.bootflash" value="true"/>
         <property key="memories.configurationmemory" value="true"/>
         <property key="memories.dataflash" value="true"/>
