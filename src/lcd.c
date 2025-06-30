@@ -161,7 +161,7 @@ void LCD_WriteByte(unsigned char bData)
 	// Set En
 	lat_LCD_DISP_EN = 1;    
 
-    delay1us(1);
+//    delay1us(1);
 	// Clear En
 	lat_LCD_DISP_EN = 0;
 
@@ -174,7 +174,7 @@ void LCD_WriteByte(unsigned char bData)
     //lat_LCD_DISP_EN = 1;
     /*delay1us(1);
     lat_LCD_DISP_EN = 0;*/
-    delay1us(1);
+//    delay1us(1);
     while(LCD_ReadStatus() & mskBStatus );
 
 }
@@ -204,11 +204,11 @@ unsigned char LCD_ReadByte()
     tris_LCD_DATA |= msk_LCD_DATA;
 	// Set RW
 	lat_LCD_DISP_RW = 1;
-    delay1us(1);
+//    delay1us(1);
 
     // Clear En
 	lat_LCD_DISP_EN = 1;
-    delay1us(1);
+//    delay1us(1);
   	bData = (unsigned char)(prt_LCD_DATA & (unsigned int)msk_LCD_DATA);
 	lat_LCD_DISP_EN = 0;
 	return bData;
@@ -385,7 +385,7 @@ void LCD_DisplaySet(unsigned char bDisplaySetOptions)
 void LCD_DisplayClear()
 {
 	LCD_WriteCommand(cmdLcdClear);
-    delay39us(40);
+//    delay39us(40);
 }
 
 /* ------------------------------------------------------------ */

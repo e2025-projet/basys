@@ -21,17 +21,18 @@
 /* ************************************************************************** */
 /* ************************************************************************** */
 
+#include <xc.h>
+#include <sys/attribs.h>
+
+#include "config.h"
 #include "adc.h"
 #include "led.h"
-
-volatile uint16_t right_level = 0;
-volatile uint16_t left_level  = 0;
 
 /*
  * Lookup table for LD3 to LD0, where 0x0 and 0x0F correspond
  * respectively to levels 0 and 4.
 */
-const uint16_t right_level_patterns[] = {
+const uint8_t right_level_patterns[] = {
     0x0,  // 0 LED
     0x08, // 1 LED
     0x0C, // 2 LED
@@ -43,13 +44,18 @@ const uint16_t right_level_patterns[] = {
  * Lookup table for LD4 to LD7, where 0x0 and 0xF0 correspond
  * respectively to levels 0 and 4.
 */
-const uint16_t left_level_patterns[] = {
+const uint8_t left_level_patterns[] = {
     0x0,  // 0 LED
     0x10, // 1 LED
     0x30, // 2 LED
     0x70, // 3 LED
     0xF0  // 4 LED
 };
+
+
+// Left and right levels for bargraph volume (LD4 - LD7 and LD3 - LD0)
+volatile uint8_t right_level = 0;
+volatile uint8_t left_level  = 0;
 
 
 /* ISR for ADC3 : 
@@ -59,8 +65,7 @@ const uint16_t left_level_patterns[] = {
  * In future updates, this will display independent volume levels for left and right 
  * MEMS microphones.
  */
-void __ISR(_ADC_VECTOR, IPL6AUTO) ISR_ADC3_Microphone()
-{
+void __ISR(_ADC_VECTOR, IPL6AUTO) ISR_ADC3_Microphone(){
     uint16_t adc_value = ADC1BUF0;
     // Calculate the index level (1023 - 500) / (5 levels) = 105
     uint8_t index_level = (adc_value - MIC_THRESHOLD) / 105; 
@@ -69,14 +74,13 @@ void __ISR(_ADC_VECTOR, IPL6AUTO) ISR_ADC3_Microphone()
     right_level = right_level_patterns[index_level] & 0x0F; 
     left_level  = left_level_patterns[index_level] & 0xF0; 
     
-    // Reset all LEDs
+//    // Reset all LEDs
     LATACLR = 0xFF; 
     // Turn on LEDs depending on the current volume level
     LATASET = left_level | right_level;
     // Reset interrupt flag
     IFS0bits.AD1IF = 0; 
 }
-
 
 
 /* Initializes the ADC module to read analog input from the onboard microphone.

@@ -13,6 +13,8 @@
           <itemPath>../src/lcd.h</itemPath>
           <itemPath>../src/rgbled.h</itemPath>
           <itemPath>../src/adc.h</itemPath>
+          <itemPath>../src/sensor.h</itemPath>
+          <itemPath>../src/spi_i2s.h</itemPath>
         </logicalFolder>
         <logicalFolder name="f1" displayName="system_config" projectFiles="true">
           <logicalFolder name="f1" displayName="default" projectFiles="true">
@@ -214,6 +216,7 @@
           <itemPath>../src/rgbled.c</itemPath>
           <itemPath>../src/spi_i2s.c</itemPath>
           <itemPath>../src/adc.c</itemPath>
+          <itemPath>../src/sensor.c</itemPath>
         </logicalFolder>
         <logicalFolder name="f1" displayName="system_config" projectFiles="true">
           <logicalFolder name="f1" displayName="default" projectFiles="true">
