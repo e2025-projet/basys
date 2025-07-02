@@ -488,13 +488,13 @@ void LCD_WriteStringAtPos(char *szLn, unsigned char idxLine, unsigned char idxPo
 	// Set write position
 	unsigned char bAddrOffset = (idxLine == 0 ? 0: 0x40) + idxPos;
 	LCD_SetWriteDdramPosition(bAddrOffset);
-    delay39us(4);
+//    delay39us(4);
 
 	unsigned char bIdx = 0;
 	while(bIdx < len)
 	{
 		LCD_WriteDataByte(szLn[bIdx]);
-        delay39us(2);
+//        delay39us(2);
         //DelayAprox10Us(10 );
 		bIdx++;
 	}

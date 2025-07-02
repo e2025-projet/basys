@@ -27,14 +27,16 @@
 #include "lcd.h"
 #include <stdio.h>
 
-// Strings for debug purposes (used for printing clock cycles/distance)
+// Strings for debug purposes (used for printing clock cycles/distance/gain)
 char clocks_str[16];
 char dist_str[16];
+char gain_str[16];
 
 // Speed of sound depending on ambient temperature
 float speed_sound = 0;
 // Distance calculated from HC-SR04 distance sensor
 volatile float distance = 0;
+// 
 // Duration of ECHO signal in CPU clock cycles 
 volatile int32_t clocks_nb = 0;
 // Saved value from ECHO signal rising edge 
@@ -57,7 +59,7 @@ void __ISR(_TIMER_2_VECTOR, IPL7AUTO) ISR_Timer2_Sensor() {
         TRIG_PIN = 1;
         trig_done = 1;
     }
-    else if (counter == 10) { // In normal conditions, counter condition is unnecessary
+    else { // In normal conditions, counter condition is unnecessary
         // Drop TRIG pulse
         TRIG_PIN = 0;
         // Reset flag and counter
@@ -66,7 +68,7 @@ void __ISR(_TIMER_2_VECTOR, IPL7AUTO) ISR_Timer2_Sensor() {
         // Disable Timer2 interrupt after pulse
         Disable_DistISR();
     }
-    counter++;
+//    counter++;
     IFS0bits.T2IF = 0; // Reset interrupt flag
 }
 
@@ -194,18 +196,40 @@ void Calculate_Distance() {
 
 
 /**
- * @brief Prints the measured clock cycles and distance on the LCD.
+ * @brief Prints the measured clock cycles, distance, and gain on the LCD.
  *
- * Formats two strings showing:
- * - `clocks_nb` (raw timing in CPU clock cycles)
- * - `distance` (in centimeters)
+ * Formats three debug strings:
+ * - `clocks_nb`: raw timing in CPU clock cycles
+ * - `distance` : measured distance in centimeters (commented out for now)
+ * - `gain`     : computed gain percentage based on distance
+ *
+ * Only `clocks_str` and `gain_str` are currently displayed on the LCD.
+ * The distance string (`dist_str`) can be enabled for additional debugging.
  */
 void Print_Distance() {
-    // Generate both strings for clock cycles and distance in centimeters
+    // Generate strings for clock cycles, distance in cm, and gain percentage
     sprintf(clocks_str, "Clocks: %d", clocks_nb);
-    sprintf(dist_str, "Dist: %.2f cm", distance);
-    // Show on display (used for debug purposes)
-    LCD_DisplayClear();
+//    sprintf(dist_str, "  Dist: %3.0f cm ", distance);
+    sprintf(gain_str, "  Gain: %3.0f %%   ", Get_Gain()*100);
+
+    // Show relevant strings on LCD
+//    LCD_DisplayClear();
     LCD_WriteStringAtPos(clocks_str, 0, 0);
-    LCD_WriteStringAtPos(dist_str, 1, 0);
+    LCD_WriteStringAtPos(gain_str, 1, 0);
+}
+
+
+/**
+ * @brief Computes a normalized gain value (0.0 to 1.0) based on measured distance.
+ *
+ * Gain is 0.0 if the distance is below `DIST_0_GAIN`,
+ * 1.0 if the distance exceeds `DIST_100_GAIN`,
+ * and linearly interpolated in between.
+ *
+ * @return Gain value between 0.0 (min) and 1.0 (max).
+ */
+float Get_Gain() {
+    if (distance > DIST_100_GAIN) return 1;
+    else if (distance < DIST_0_GAIN) return 0;
+    else return (float)((distance - DIST_0_GAIN)/DIST_100_GAIN);
 }

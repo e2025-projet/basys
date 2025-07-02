@@ -273,7 +273,10 @@ void MAIN_Tasks ( void )
     }
 }
 
+
+
 int main(void) {
+    uint32_t count = 0;
     SYS_Initialize(NULL);
     MAIN_Initialize();
     SYS_INT_Enable();
@@ -284,6 +287,11 @@ int main(void) {
     while (1) {
         SYS_Tasks();
         MAIN_Tasks();
+        if (count++ > 3000) {
+            Enable_DistISR();
+            count = 0;
+        }
+        
     };
 
     return 0;

@@ -20,6 +20,9 @@
 
 #define CPU_FREQ 48000000
 #define DEFAULT_SPEED_SOUND 343
+#define DIST_100_GAIN 30
+#define DIST_0_GAIN 5
+
 #define TRIG_PIN LATDbits.LATD11
 #define ECHO_PIN PORTDbits.RD9
 
@@ -68,13 +71,29 @@ void Calculate_Distance();
 
 
 /**
- * @brief Prints the measured clock cycles and distance on the LCD.
+ * @brief Prints the measured clock cycles, distance, and gain on the LCD.
  *
- * Formats two strings showing:
- * - `clocks_nb` (raw timing in CPU clock cycles)
- * - `distance` (in centimeters)
- */
+ * Formats three debug strings:
+ * - `clocks_nb`: raw timing in CPU clock cycles
+ * - `distance` : measured distance in centimeters (commented out for now)
+ * - `gain`     : computed gain percentage based on distance
+ *
+ * Only `clocks_str` and `gain_str` are currently displayed on the LCD.
+ * The distance string (`dist_str`) can be enabled for additional debugging.
+*/
 void Print_Distance();
+
+
+/**
+ * @brief Computes a normalized gain value (0.0 to 1.0) based on measured distance.
+ *
+ * Gain is 0.0 if the distance is below `DIST_0_GAIN`,
+ * 1.0 if the distance exceeds `DIST_100_GAIN`,
+ * and linearly interpolated in between.
+ *
+ * @return Gain value between 0.0 (min) and 1.0 (max).
+ */
+float Get_Gain();
 
 #endif
 
