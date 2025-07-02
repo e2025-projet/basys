@@ -116,7 +116,7 @@ int Last_Intense[3];
 
 void Interupt_ACL_Init(void)
 {
-    IFS0bits.INT4IF = 0;
+    IFS0bits.INT4IF = 0; //pin0
     IEC0bits.INT4IE = 1;
     IPC4bits.INT4IP = 1;
     IPC4bits.INT4IS = 0;
