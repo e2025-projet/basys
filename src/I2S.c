@@ -122,7 +122,7 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
         int32_t mono = (PORTFbits.RF5) ? left : right;
         if (PORTFbits.RF4) mono = (left + right) >> 1;
      
-        mono = mono >> 12;
+        mono = mono >> 14;
         
         mono = mono * 4;
         
