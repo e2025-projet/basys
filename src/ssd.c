@@ -306,7 +306,7 @@ unsigned char SSD_GetDigitSegments(unsigned char d)
 void SSD_WriteDigits(unsigned char d1, unsigned char d2, unsigned char d3, unsigned char d4, \
         unsigned char dp1, unsigned char dp2, unsigned char dp3, unsigned char dp4)
 {
-      T1CONbits.ON = 0;                   // turn off Timer1
+      T4CONbits.ON = 0;                   // turn off Timer1
     digits[0] = SSD_GetDigitSegments(d1);
     digits[1] = SSD_GetDigitSegments(d2);
     digits[2] = SSD_GetDigitSegments(d3);
@@ -329,7 +329,7 @@ void SSD_WriteDigits(unsigned char d1, unsigned char d2, unsigned char d3, unsig
         digits[3] |= 0x80;
     }    
     //SYS_PRINT("%1x %1x %1x %1x \n\r", digits[3], digits[2], digits[1], digits[0]);
-  T1CONbits.ON = 1;                   //  turn on Timer1
+  T4CONbits.ON = 1;                   //  turn on Timer1
 }
 
 /* ------------------------------------------------------------ */
@@ -367,7 +367,7 @@ void SSD_WriteDigitsGrouped(unsigned int val, unsigned char dp)
 void SSD_Close()
 {
     // stop the timer
-    T1CONbits.ON = 0;// turn off Timer1
+    T4CONbits.ON = 0;// turn off Timer1
     // turn off digits
     lat_SSD_AN1 = 1; // deactivate digit 1;
     lat_SSD_AN2 = 1; // deactivate digit 2;    

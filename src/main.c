@@ -64,8 +64,9 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "accel.h"
 #include "lcd.h"
 #include "adc.h"
-#include "sensor.h"
+#include "gain_out.h"
 #include "app_commands.h"
+#include "fsm.h"
 
 
 //Moyenne est faite direct sur la MX3 (GestionMoyenne dans accel.c)
@@ -198,18 +199,18 @@ void MAIN_Initialize ( void )
      
     /* Place the App state machine in its initial state. */
     mainData.state = MAIN_STATE_INIT;
-
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
+    uint8_t dist_sensor_en = 0;
 
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LCD_Init(); // Initialisation de l'écran LCD
 //    ACL_Init(); // Initialisation de l'accéléromètre
-    SSD_Init(); // Initialisation du Timer4 et de l'accéléromètre
+//    SSD_Init(); // Initialisation du Timer4 et de l'accéléromètre
 //    Interupt_ACL_Init(); //Initialisation de l'interuption de l'accéléromètre
     RGBLED_Init();
     LED_Init(); // Initialisation des LEDs
     Initialize_ADC_Microphone(); 
-    Init_Dist_Sensor(0, 24);
+    initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
     macro_enable_interrupts();
     
 }
@@ -260,6 +261,7 @@ void MAIN_Tasks ( void )
             RGB_Task();
             UDP_Tasks();
             ManageSwitches();
+            updateState();
         	JB1Toggle();
             break;
         }
@@ -276,22 +278,14 @@ void MAIN_Tasks ( void )
 
 
 int main(void) {
-    uint32_t count = 0;
     SYS_Initialize(NULL);
     MAIN_Initialize();
     SYS_INT_Enable();
-    SSD_WriteDigitsGrouped(0x1010,0x0);
     LCD_WriteStringAtPos("Projet S4: ANC", 1, 0);
-    Enable_DistISR();
     
     while (1) {
         SYS_Tasks();
         MAIN_Tasks();
-        if (count++ > 3000) {
-            Enable_DistISR();
-            count = 0;
-        }
-        
     };
 
     return 0;
