@@ -48,7 +48,7 @@ void Timer3_Init(void)
 {
     T3CON = 0;
     T3CONbits.TCKPS = 0b000;      // Prédiviseur 1:1
-    PR3             = 767;        // Valeur pour PR2 (767 - 62.5 kHz PWM base)
+    PR3             = 999;        // Valeur pour PR2 (767 - 62.5 kHz PWM base)
     TMR3            = 0;
     
     IPC3bits.T3IP   = 1;          // Priorité d'interruption
@@ -91,7 +91,7 @@ void SPI1_I2S_Config(void)
     SPI1CON2bits.AUDEN  = 1;      // I²S mode
     SPI1CON2bits.AUDMOD = 0;      // Standard I²S
 
-    SPI1BRG = 50;                  // ~4 MHz BCLK (Pclk = 48 MHz)
+    SPI1BRG = 5;                  // ~4 MHz BCLK (Pclk = 48 MHz)
 
     // --- Interrupt setup ---
     IFS1bits.SPI1RXIF = 0;        // Clear interrupt flag
@@ -116,16 +116,20 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
         uint32_t right_raw = SPI1BUF;
 
         // Convert to mono
-        int32_t left  = ((int32_t)left_raw) >> 8;
+        int32_t left  = ((int32_t)left_raw) >> 8; // 32 bits to 24 bits
         int32_t right = ((int32_t)right_raw) >> 8;
         
         int32_t mono = (PORTFbits.RF5) ? left : right;
         if (PORTFbits.RF4) mono = (left + right) >> 1;
      
-        mono = mono >> 14;
+        mono = mono >> 12;
+        
+        mono = mono * 4;
+        
+        
+        if (mono < -512) mono = -512;
+        if (mono > 511) mono = 511;
         mono += 512;
-        if (mono < 0) mono = 0;
-        if (mono > 1023) mono = 1023;
 
         pwm_val = (uint16_t)mono;
     }

@@ -210,7 +210,7 @@ void MAIN_Initialize ( void )
 //    ACL_Init(); // Initialisation de l'accéléromètre
     SSD_Init(); // Initialisation du Timer4 et de l'accéléromètre
 //    Interupt_ACL_Init(); //Initialisation de l'interuption de l'accéléromètre
-    RGBLED_Init();
+//    RGBLED_Init();
     LED_Init(); // Initialisation des LEDs
     Initialize_ADC_Microphone(); 
     Init_Dist_Sensor(0, 24);
