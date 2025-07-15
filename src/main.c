@@ -61,6 +61,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "led.h"
 #include "rgbled.h"
 #include "ssd.h"
+#include "I2S.h"
 #include "accel.h"
 #include "lcd.h"
 #include "adc.h"
@@ -200,7 +201,10 @@ void MAIN_Initialize ( void )
     mainData.state = MAIN_STATE_INIT;
 
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
-
+    
+    OC1_Init();         // Set up Output Compare
+    Timer3_Init();      // Required for OC1
+    SPI1_I2S_Config();  // SPI2 in I²S mode
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LCD_Init(); // Initialisation de l'écran LCD
 //    ACL_Init(); // Initialisation de l'accéléromètre
@@ -280,6 +284,8 @@ int main(void) {
     SSD_WriteDigitsGrouped(0x1010,0x0);
     LCD_WriteStringAtPos("Projet S4: ANC", 1, 0);
     Enable_DistISR();
+    
+    //INTCONbits.MVEC = 1;              // Enable multi-vector interrupts
     
     while (1) {
         SYS_Tasks();

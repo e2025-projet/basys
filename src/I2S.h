@@ -23,9 +23,11 @@
 extern "C" {
 #endif   
     
-void SPI2_I2S_Config(void);
+void OC1_Init(void);
 
-void Timer5_Config(void);
+void Timer3_Init(void);
+
+void SPI1_I2S_Config(void);
 
 #ifdef __cplusplus
 }
