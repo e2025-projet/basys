@@ -61,6 +61,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "led.h"
 #include "rgbled.h"
 #include "ssd.h"
+#include "I2S.h"
 #include "accel.h"
 #include "lcd.h"
 #include "adc.h"
@@ -122,7 +123,7 @@ void Interupt_ACL_Init(void)
     IPC4bits.INT4IP = 1;
     IPC4bits.INT4IS = 0;
     INTCONbits.INT4EP = 0;
-    INT4Rbits.INT4R = 12;    //assigner le Interupt au boutton C en mettant 4, quand ca va être ok mettre 12
+    INT4Rbits.INT4R = 12;    //assigner le Interupt au boutton C en mettant 4, quand ca va ï¿½tre ok mettre 12
 }
 
 static bool sw0_old; 
@@ -141,7 +142,7 @@ void ManageSwitches()
 
 void RGB_Task()
 {
-    //if(timer_1m) {               // Interruption à chaque 1 ms
+    //if(timer_1m) {               // Interruption ï¿½ chaque 1 ms
         //timer_1m = 0;            // Reset the compteur to capture the next event
         //Toute pour la Moyenne fait directement dans la MX3 avec la fonction GestionMoyenne dans accel.c
         Intense[0] = (MoyenneX*255)/2096;
@@ -200,14 +201,17 @@ void MAIN_Initialize ( void )
     /* Place the App state machine in its initial state. */
     mainData.state = MAIN_STATE_INIT;
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
-    uint8_t dist_sensor_en = 0;
+        uint8_t dist_sensor_en = 0;
 
+    OC1_Init();         // Set up Output Compare
+    Timer3_Init();      // Required for OC1
+    SPI1_I2S_Config();  // SPI2 in Iï¿½S mode
     UDP_Initialize(); // Initialisation de du serveur et client UDP
-    LCD_Init(); // Initialisation de l'écran LCD
-//    ACL_Init(); // Initialisation de l'accéléromètre
-//    SSD_Init(); // Initialisation du Timer4 et de l'accéléromètre
-//    Interupt_ACL_Init(); //Initialisation de l'interuption de l'accéléromètre
-    RGBLED_Init();
+    LCD_Init(); // Initialisation de l'ï¿½cran LCD
+//    ACL_Init(); // Initialisation de l'accï¿½lï¿½romï¿½tre
+//    SSD_Init(); // Initialisation du Timer4 et de l'accï¿½lï¿½romï¿½tre
+//    Interupt_ACL_Init(); //Initialisation de l'interuption de l'accï¿½lï¿½romï¿½tre
+//    RGBLED_Init();
     LED_Init(); // Initialisation des LEDs
     Initialize_ADC_Microphone(); 
     initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
@@ -219,12 +223,12 @@ void MAIN_Initialize ( void )
 /******************************************************************************
   Function:
     void MAIN_Tasks ( void )
- * Fonction qui execute les tâches de l'application. Cette fonction est une
- * machien d'état :
- * 1. MAIN_STATE_INIT; Initialise les périphérique de communication USART et 
- *    passe à l'état 2 quand l'initialisation est terminée.
- * 2. MAIN_STATE_SERVICE_TASKS; Execute les tâches de l'application. Ne change 
- * jamais d'état.
+ * Fonction qui execute les tï¿½ches de l'application. Cette fonction est une
+ * machien d'ï¿½tat :
+ * 1. MAIN_STATE_INIT; Initialise les pï¿½riphï¿½rique de communication USART et 
+ *    passe ï¿½ l'ï¿½tat 2 quand l'initialisation est terminï¿½e.
+ * 2. MAIN_STATE_SERVICE_TASKS; Execute les tï¿½ches de l'application. Ne change 
+ * jamais d'ï¿½tat.
 
   Remarks:
     See prototype in main.h.
