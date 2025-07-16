@@ -33,6 +33,8 @@ void Timer3_Init(void);
 
 void SPI1_I2S_Config(void);
 
+uint16_t compress_audio_linear(int32_t input_24bit);
+
 #ifdef __cplusplus
 }
 #endif

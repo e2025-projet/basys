@@ -158,21 +158,51 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
         int32_t right = ((int32_t)right_raw) >> 8;
         
         int32_t mono = (PORTFbits.RF5) ? left : right;
-        if (PORTFbits.RF4) mono = (left + right) >> 1;
+//        if (PORTFbits.RF4) mono = (left + right) >> 1;
         
+        // Apply dynamic range compression instead of simple bit shifting
+        pwm_val = compress_audio_linear(mono);
         
-        mono = (mono & 0x3FF00) >> 8; 
-      
-      
-        if (mono < -512) mono = -512;
-        if (mono > 511) mono = 511;
-        mono += 512;
-        
+        // Calculate the index level
+        uint8_t index_level = (pwm_val - 700) / 105; 
 
-        pwm_val = (uint16_t)mono;
+        // Load the proper fields for LD7 to LD0 in their corresponding LUTs
+        right_level = right_level_patterns[index_level] & 0x0F; 
+        left_level  = left_level_patterns[index_level] & 0xF0; 
+
+//    //    // Reset all LEDs
+        LATACLR = 0xFF; 
+        // Turn on LEDs depending on the current volume level
+        LATASET = left_level | right_level;
     }
 
     IFS1bits.SPI1RXIF = 0; // Clear interrupt flag
+}
+
+
+uint16_t compress_audio_linear(int32_t input_24bit) {
+    // Convert to 18-bit signed
+    int32_t input_18bit = input_24bit >> 6;
+    
+    // Get absolute value
+    uint32_t abs_value = (input_18bit < 0) ? (uint32_t)(-input_18bit) : (uint32_t)input_18bit;
+    
+    // 18-bit range is 0 to 131071, map to 0-1023
+    // But apply some compression to avoid saturation
+    
+    // Apply soft compression curve
+    if (abs_value > 65536) {
+        // Above 50% of max, compress more
+        abs_value = 65536 + ((abs_value - 65536) >> 2);
+    }
+    
+    // Scale to 10-bit range
+    uint16_t result = (uint16_t)(abs_value >> 4); // Divide by 128
+    
+    if (result > 1023) result = 1023;
+    if (result < 1) result = 1;
+    
+    return result;
 }
 
 /* ISR de Timer2 : gère sortie audio PWM */
