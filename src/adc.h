@@ -17,9 +17,9 @@
 
 #ifndef _ADC_H    /* Guard against multiple inclusion */
 #define _ADC_H
-
-// Threshold level for onboard microphone
-#define MIC_THRESHOLD 500
+//
+//// Threshold level for onboard microphone
+//#define MIC_THRESHOLD 500
 
 /* Initializes the ADC module to read analog input from the onboard microphone.
  * Configures ADC settings, input pin, trigger source, and interrupt priority.

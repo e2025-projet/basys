@@ -18,16 +18,56 @@
 #include <xc.h>
 #include <sys/attribs.h>
 
-#include <math.h>
+#include "lcd.h"
 
+#include <stdio.h>
 #include "I2S.h"
+
+/*
+ * Lookup table for LD3 to LD0, where 0x0 and 0x0F correspond
+ * respectively to levels 0 and 4.
+*/
+const uint8_t right_level_patterns[] = {
+    0x0,  // 0 LED
+    0x08, // 1 LED
+    0x0C, // 2 LED
+    0x0E, // 3 LED
+    0x0F  // 4 LED
+};
+
+/*
+ * Lookup table for LD4 to LD7, where 0x0 and 0xF0 correspond
+ * respectively to levels 0 and 4.
+*/
+const uint8_t left_level_patterns[] = {
+    0x0,  // 0 LED
+    0x10, // 1 LED
+    0x30, // 2 LED
+    0x70, // 3 LED
+    0xF0  // 4 LED
+};
+
+// Left and right levels for bargraph volume (LD4 - LD7 and LD3 - LD0)
+volatile uint8_t right_level = 0;
+volatile uint8_t left_level  = 0;
 
 volatile uint16_t pwm_val = 0;
 volatile uint32_t raw_left  = 0;
 volatile uint32_t raw_right  = 0;
 
+volatile uint32_t left_unsigned = 0;
+volatile uint32_t right_unsigned = 0;
+
+// Your I2S samples are 18-bit signed (range ? -131072 to +131071)
+const int32_t FULL_SCALE = 131072;  // 2^17
+const int32_t PWM_MAX = 1023;
+
+char string_spi[16];
 
 void OC1_Init(void) {
+    
+    TRISCbits.TRISC2 = 0;
+    RPC2R = 0b1100;
     
     TRISBbits.TRISB14 = 0;   // Configure RB14 en sortie
     ANSELBbits.ANSB14 = 0;   // Désactive l'analogique sur RB14
@@ -58,8 +98,7 @@ void Timer3_Init(void)
     
     T3CONbits.ON    = 1;          // Démarre Timer2
 }
-
-
+  
 void SPI1_I2S_Config(void)
 {
     TRISFbits.TRISF5 = 1;
@@ -68,7 +107,6 @@ void SPI1_I2S_Config(void)
     // --- Set SPI pins ---
     TRISFbits.TRISF8 = 0;         // SS2 output
     TRISFbits.TRISF6 = 1;         // SDI input ()
-    TRISFbits.TRISF6 = 0;         // SCK2 output ()
 
     RPF8R  = 0b0111;              // SS1 = RF8 ()
     SDI1R  = 0x0F;                 // SDI1 = RPF6
@@ -114,22 +152,22 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
     while (SPI1STATbits.RXBUFELM > 1) {
         uint32_t left_raw  = SPI1BUF;
         uint32_t right_raw = SPI1BUF;
-
+        
         // Convert to mono
         int32_t left  = ((int32_t)left_raw) >> 8; // 32 bits to 24 bits
         int32_t right = ((int32_t)right_raw) >> 8;
         
         int32_t mono = (PORTFbits.RF5) ? left : right;
         if (PORTFbits.RF4) mono = (left + right) >> 1;
-     
-        mono = mono >> 14;
-        
-        mono = mono * 2;
         
         
+        mono = (mono & 0x3FF00) >> 8; 
+      
+      
         if (mono < -512) mono = -512;
         if (mono > 511) mono = 511;
         mono += 512;
+        
 
         pwm_val = (uint16_t)mono;
     }

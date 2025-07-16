@@ -202,7 +202,7 @@ void MAIN_Initialize ( void )
     mainData.state = MAIN_STATE_INIT;
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
         uint8_t dist_sensor_en = 0;
-
+        
     OC1_Init();         // Set up Output Compare
     Timer3_Init();      // Required for OC1
     SPI1_I2S_Config();  // SPI2 in I�S mode
@@ -213,7 +213,7 @@ void MAIN_Initialize ( void )
 //    Interupt_ACL_Init(); //Initialisation de l'interuption de l'acc�l�rom�tre
 //    RGBLED_Init();
     LED_Init(); // Initialisation des LEDs
-    Initialize_ADC_Microphone(); 
+//    Initialize_ADC_Microphone(); 
     initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
     macro_enable_interrupts();
     
@@ -285,7 +285,7 @@ int main(void) {
     SYS_Initialize(NULL);
     MAIN_Initialize();
     SYS_INT_Enable();
-    LCD_WriteStringAtPos("Projet S4: ANC", 1, 0);
+//    LCD_WriteStringAtPos("Projet S4: ANC", 1, 0);
     
     while (1) {
         SYS_Tasks();

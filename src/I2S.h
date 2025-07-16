@@ -23,6 +23,10 @@
 extern "C" {
 #endif   
     
+    
+// Threshold level for onboard microphone
+#define MIC_THRESHOLD 512
+    
 void OC1_Init(void);
 
 void Timer3_Init(void);
