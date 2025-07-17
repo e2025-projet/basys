@@ -37,7 +37,7 @@ unsigned char SSD_GetDigitSegments(unsigned char d);
 void SSD_ConfigurePins();
 void SSD_Timer4Setup();
 
-VOID SSD_Close();
+void SSD_Close();
 
 
     /* Provide C++ Compatibility */
