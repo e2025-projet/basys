@@ -58,12 +58,12 @@ void updateState(void) {
         case STATE_ANC:
             if (prt_SWT_SWT0) {
                 setDistSensor(0); // Disable distance sensor
-                updateGain();
             } else if (counter_trig++ > 30) {
                 setDistSensor(1); // Enable distance sensor
                 enableDistISR();
                 counter_trig = 0;
             }
+            updateGain();
             break;
         case STATE_HEAR_THROUGH:
             break;
@@ -83,7 +83,8 @@ void updateState(void) {
 void displayState(void) {
     LCD_WriteStringAtPos(stateToString(current_state), 0, 0);
     if (current_state == STATE_ANC) {
-        printGain();
+        if (!prt_SWT_SWT7) printGain();
+        else printDistance();
     } else {
         LCD_WriteStringAtPos(empty_string, 1, 0);
     }

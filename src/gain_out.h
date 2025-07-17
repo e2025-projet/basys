@@ -32,6 +32,10 @@
 #define TRIG_PIN LATDbits.LATD11
 #define ECHO_PIN PORTDbits.RD9
 
+
+// Gain for noise cancellation output level
+extern uint16_t gain_out;
+
 /**
  * @brief Initializes the ultrasonic distance sensor system (HC-SR04).
  *
@@ -84,6 +88,9 @@ void calculateDistance();
  * on the LCD at line 1, position 0.
  */
 void printGain();
+
+
+void printDistance();
 
 
 /**

@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include "I2S.h"
+#include "gain_out.h"
 
 /*
  * Lookup table for LD3 to LD0, where 0x0 and 0x0F correspond
@@ -161,16 +162,19 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
 //        if (PORTFbits.RF4) mono = (left + right) >> 1;
         
         // Apply dynamic range compression instead of simple bit shifting
-        pwm_val = compress_audio_linear(mono);
+        uint16_t audio_value = compress_audio_linear(mono);
+        
+        // Apply dynamic range compression instead of simple bit shifting
+        pwm_val = audio_value;
         
         // Calculate the index level
-        uint8_t index_level = (pwm_val - 700) / 105; 
+        uint8_t index_level = (audio_value - 700) / 105; 
 
         // Load the proper fields for LD7 to LD0 in their corresponding LUTs
         right_level = right_level_patterns[index_level] & 0x0F; 
         left_level  = left_level_patterns[index_level] & 0xF0; 
 
-//    //    // Reset all LEDs
+        // Reset all LEDs
         LATACLR = 0xFF; 
         // Turn on LEDs depending on the current volume level
         LATASET = left_level | right_level;
@@ -208,7 +212,7 @@ uint16_t compress_audio_linear(int32_t input_24bit) {
 /* ISR de Timer2 : gère sortie audio PWM */
 void __ISR(_TIMER_3_VECTOR, IPL1AUTO) Timer3_ISR(void) { 
     
-    OC1RS = pwm_val;   
+    OC1RS = (uint16_t) pwm_val * gain_out / 100;   
     IFS0bits.T3IF = 0;
 };
 

@@ -209,7 +209,7 @@ void MAIN_Initialize ( void )
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LCD_Init(); // Initialisation de l'�cran LCD
 //    ACL_Init(); // Initialisation de l'acc�l�rom�tre
-//    SSD_Init(); // Initialisation du Timer4 et de l'acc�l�rom�tre
+    SSD_Init(); // Initialisation du Timer4 et de l'acc�l�rom�tre
 //    Interupt_ACL_Init(); //Initialisation de l'interuption de l'acc�l�rom�tre
 //    RGBLED_Init();
     LED_Init(); // Initialisation des LEDs
@@ -285,6 +285,7 @@ int main(void) {
     SYS_Initialize(NULL);
     MAIN_Initialize();
     SYS_INT_Enable();
+    SSD_Close();
 //    LCD_WriteStringAtPos("Projet S4: ANC", 1, 0);
     
     while (1) {

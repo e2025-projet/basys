@@ -215,6 +215,15 @@ void calculateDistance() {
 }
 
 
+void printDistance() {
+    // Generate string for gain percentage
+    sprintf(dist_str, "  Dist: %2d cm   ", distance);
+
+    // Show distance string on LCD
+    LCD_WriteStringAtPos(dist_str, 1, 0);
+}
+
+
 /**
  * @brief Prints the measured gain on the LCD.
  *
@@ -224,7 +233,7 @@ void calculateDistance() {
  */
 void printGain() {
     // Generate string for gain percentage
-    sprintf(gain_str, "  Gain: %3d %%   ", getGain());
+    sprintf(gain_str, "  Gain: %3d %%   ", gain_out);
 
     // Show gain string on LCD
     LCD_WriteStringAtPos(gain_str, 1, 0);
@@ -266,18 +275,31 @@ void setGain(uint16_t gain) {
  * accordingly. BTNU increases gain by 10%, BTND decreases it by 10%.
  */
 void updateGain() {
-    // Capture the buttons state for the output gain
-    curr_btnu = prt_BTN_BTNU;
-    curr_btnd = prt_BTN_BTND;
-    
-    if (curr_btnu && !prev_btnu && gain_out != GAIN_100_PERCENT) {
-        gain_out += GAIN_10_PERCENT;
+    if (!dist_sensor_en) {
+        // Capture the buttons state for the output gain
+        curr_btnu = prt_BTN_BTNU && !prev_btnu;
+        curr_btnd = prt_BTN_BTND && !prev_btnd;
+        
+        if (curr_btnu && gain_out > (GAIN_100_PERCENT - GAIN_10_PERCENT)) {
+            gain_out = GAIN_100_PERCENT;
+        }
+        else if (curr_btnd && gain_out < GAIN_10_PERCENT) {
+            gain_out = GAIN_0_PERCENT;
+        }
+        else if (curr_btnu && gain_out != GAIN_100_PERCENT) {
+            gain_out += GAIN_10_PERCENT;
+        }
+        else if (curr_btnd && gain_out != GAIN_0_PERCENT) {
+            gain_out -= GAIN_10_PERCENT;
+        }
+
+        // Update the previous BTNU and BTND for debouncing
+        prev_btnu = prt_BTN_BTNU;
+        prev_btnd = prt_BTN_BTND;
     }
-    else if (curr_btnd && !prev_btnd && gain_out != GAIN_0_PERCENT) {
-        gain_out -= GAIN_10_PERCENT;
+    else {
+        if (distance >= DIST_100_GAIN) gain_out = GAIN_100_PERCENT;
+        else if (distance <= DIST_0_GAIN) gain_out = GAIN_0_PERCENT; 
+        else gain_out = (uint16_t)((distance - DIST_0_GAIN) * 100) / (DIST_100_GAIN - DIST_0_GAIN);
     }
-    
-    // Update the previous BTNU and BTND for debouncing
-    prev_btnu = curr_btnu;
-    prev_btnd = curr_btnd;
 }
