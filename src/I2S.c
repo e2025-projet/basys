@@ -17,12 +17,15 @@
 
 #include <xc.h>
 #include <sys/attribs.h>
+#include "config.h"
 
 #include "lcd.h"
 
 #include <stdio.h>
 #include "I2S.h"
 #include "gain_out.h"
+
+#include "filterIIRCoeffs.h"
 
 /*
  * Lookup table for LD3 to LD0, where 0x0 and 0x0F correspond
@@ -144,6 +147,8 @@ void SPI1_I2S_Config(void)
 
 void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
 {
+    uint32_t left_raw, right_raw;
+    
     // Clear overflow if it happened
     if (SPI1STATbits.SPIROV) {
         SPI1STATCLR = 1 << 6;
@@ -151,15 +156,59 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
 
     // Read all samples in FIFO
     while (SPI1STATbits.RXBUFELM > 1) {
-        uint32_t left_raw  = SPI1BUF;
-        uint32_t right_raw = SPI1BUF;
-        
+        if (prt_SWT_SWT3) {
+            left_raw  = SPI1BUF;
+            right_raw = SPI1BUF;
+        } else {
+            right_raw  = SPI1BUF;
+            left_raw = SPI1BUF;
+        }
+
         // Convert to mono
-        int32_t left  = ((int32_t)left_raw) >> 8; // 32 bits to 24 bits
-        int32_t right = ((int32_t)right_raw) >> 8;
+        int32_t left  = ((int32_t)left_raw) >> 14; // 32 bits to 24 bits
+        int32_t right = ((int32_t)right_raw) >> 14;    
+
+        int32_t in_left, out_left, in_right, out_right, nSOS = 0;
         
-        int32_t mono = (PORTFbits.RF5) ? left : right;
-//        if (PORTFbits.RF4) mono = (left + right) >> 1;
+        in_left = left;
+        in_right = right;
+        
+        uint8_t IIREnabled = !prt_SWT_SWT2;
+        
+        // If IIR filtering is enabled, real-time calculation of the next output sample
+        if (IIREnabled) {
+            out_right = in_right;
+            out_left = in_left;
+            
+             for (nSOS = 0; nSOS < N_SOS_SECTIONS; nSOS++) {
+
+                // 1) y[n] = b0·x[n] + v[n?1]
+                out_left = IIRCoeffs[nSOS][0] * in_left + IIRv_left[nSOS];
+                out_right = IIRCoeffs[nSOS][0] * in_right + IIRv_right[nSOS];
+                
+                // ramener de Q28 à Q15
+                out_left = (int16_t)(out_left >> 13);
+                out_right = (int16_t)(out_right >> 13);
+
+                // 2) compute new v[n] = b1·x[n] ? a1·y[n] + u[n?1]
+                IIRv_left[nSOS] = IIRCoeffs[nSOS][1] * in_left - IIRCoeffs[nSOS][4] * out_left + IIRu_left[nSOS];
+                IIRv_right[nSOS] = IIRCoeffs[nSOS][1] * in_right - IIRCoeffs[nSOS][4] * out_right + IIRu_right[nSOS];   
+                
+                // 3) compute new u[n] = b2·x[n] ? a2·y[n]
+                IIRu_left[nSOS] = IIRCoeffs[nSOS][2] * in_left - IIRCoeffs[nSOS][5] * out_left;
+                IIRu_right[nSOS] = IIRCoeffs[nSOS][2] * in_right - IIRCoeffs[nSOS][5] * out_right;
+
+                in_left = out_left;
+                in_right = out_right;
+            }
+            
+            // Copy the resulting filtered sample to the current output buffer
+            left = out_left;
+            right = out_right;
+            
+        }
+        
+        int32_t mono = (prt_SWT_SWT1) ? left : right;
         
         // Apply dynamic range compression instead of simple bit shifting
         uint16_t audio_value = compress_audio_linear(mono);
@@ -187,7 +236,7 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
 
 uint16_t compress_audio_linear(int32_t input_24bit) {
     // Convert to 18-bit signed
-    int32_t input_18bit = input_24bit >> 6;
+    int32_t input_18bit = input_24bit;
     
     // Get absolute value
     uint32_t abs_value = (input_18bit < 0) ? (uint32_t)(-input_18bit) : (uint32_t)input_18bit;
