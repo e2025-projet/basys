@@ -130,7 +130,7 @@ void SPI1_I2S_Config(void)
     SPI1CON2bits.AUDEN  = 1;      // I²S mode
     SPI1CON2bits.AUDMOD = 0;      // Standard I²S
 
-    SPI1BRG = 5;                  // ~4 MHz BCLK (Pclk = 48 MHz)
+    SPI1BRG = 11;                  // ~3 MHz BCLK (Pclk = 48 MHz)
 
     // --- Interrupt setup ---
     IFS1bits.SPI1RXIF = 0;        // Clear interrupt flag
@@ -168,11 +168,12 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
         pwm_val = audio_value;
         
         // Calculate the index level
-        uint8_t index_level = (audio_value - 700) / 105; 
+        uint8_t index_level_left = (compress_audio_linear(left) - 700) / 105; 
+        uint8_t index_level_right = (compress_audio_linear(right) - 620) / 105; 
 
         // Load the proper fields for LD7 to LD0 in their corresponding LUTs
-        right_level = right_level_patterns[index_level] & 0x0F; 
-        left_level  = left_level_patterns[index_level] & 0xF0; 
+        right_level = right_level_patterns[index_level_right] & 0x0F; 
+        left_level  = left_level_patterns[index_level_left] & 0xF0; 
 
         // Reset all LEDs
         LATACLR = 0xFF; 
