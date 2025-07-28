@@ -63,7 +63,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "main.h"
 #include "system_definitions.h"
 #include "accel.h"
-
+#include "analogdc.h"
 // *****************************************************************************
 // *****************************************************************************
 // Section: System Interrupt Vector Functions
@@ -75,7 +75,22 @@ void __ISR(_UART_4_VECTOR, ipl1AUTO) _IntHandlerDrvUsartInstance0(void)
     DRV_USART_TasksError(sysObj.drvUsart0);
     DRV_USART_TasksReceive(sysObj.drvUsart0);
 }
- 
+
+
+void __ISR(_ADC_VECTOR, IPL4AUTO) ADC_Interrupt(void) 
+{
+    uint8_t adc_val = (ADC1BUF0 >> 2) & 0xFF;
+    if (adc_val > 128) {
+        adc_val -= 128;
+    }
+    ADC_Send[adc_ptr++] = adc_val;
+    
+    if (adc_ptr >= ADC_LEN) {
+        adc_ready = 1;
+        adc_ptr = 0;
+    }
+    IFS0bits.AD1IF = 0; // clear interrupt flag
+}
   
 void __ISR(_EXTERNAL_4_VECTOR, IPL1AUTO) _IntHandlerExternalInterruptInstance0(void)
 {

@@ -59,15 +59,11 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "driver/spi/src/dynamic/drv_spi_internal.h"
 #include "UDP_app.h"
 #include "led.h"
-#include "rgbled.h"
 #include "ssd.h"
-#include "I2S.h"
 #include "accel.h"
+#include "analogdc.h"
 #include "lcd.h"
-#include "adc.h"
-#include "gain_out.h"
 #include "app_commands.h"
-#include "fsm.h"
 
 
 //Moyenne est faite direct sur la MX3 (GestionMoyenne dans accel.c)
@@ -115,6 +111,19 @@ MAIN_DATA mainData;
 
 int Intense[3];
 int Last_Intense[3];
+int adcVal;
+
+/* Application's LED Task Function 
+ Fonction qui fait clignoter une LED la LED1 à chaque 20000 execution du code
+ */
+static unsigned long int counter=0;
+static void LedTask(void) 
+{
+    if(counter++ == 20000){
+        LED_ToggleValue(1);
+        counter = 0;
+    }  
+}
 
 void Interupt_ACL_Init(void)
 {
@@ -123,26 +132,101 @@ void Interupt_ACL_Init(void)
     IPC4bits.INT4IP = 1;
     IPC4bits.INT4IS = 0;
     INTCONbits.INT4EP = 0;
-    INT4Rbits.INT4R = 12;    //assigner le Interupt au boutton C en mettant 4, quand ca va ï¿½tre ok mettre 12
+    INT4Rbits.INT4R = 12;    //assigner le Interupt au boutton C en mettant 4, quand ca va être ok mettre 12
 }
 
-static bool sw0_old; 
+void btnSetup() {
+    // BTN_U
+    TRISBbits.TRISB1 = 1; // configure as input
+    ANSELBbits.ANSB1 = 0; // disabled analog
+    
+    // BTN_D
+    TRISAbits.TRISA15 = 1; // configure as input
+    
+    
+    // STATE CHANGE
+    // BTN_L
+    TRISBbits.TRISB0 = 1; // configure as input
+    ANSELBbits.ANSB0 = 0; // disabled analog
+    
+    // BTN_C
+    TRISFbits.TRISF4 = 1; // configure as input
+    
+    // BTN_R
+    TRISBbits.TRISB8 = 1; // configure as input
+    ANSELBbits.ANSB8 = 0; // disabled analog
+}
+
+static bool sw0_old;
+static bool btnc_old;
+static bool btnu_old;
+static bool btnr_old;
+static bool btnd_old;
+static bool btnl_old;
+
 void ManageSwitches()
 {
     bool sw0_new = SWITCH0StateGet();
     if((sw0_new != sw0_old) && sw0_new)
     {
-        //strcpy(UDP_Send_Buffer, "Bonjour S4\n\r");
-        //UDP_bytes_to_send = strlen(UDP_Send_Buffer);
+        strcpy(UDP_Send_Buffer, "Bonjour S4\n\r");
+        UDP_bytes_to_send = strlen(UDP_Send_Buffer);
         UDP_Send_Packet = true;       
     }
 
     sw0_old = sw0_new; 
+    
+    bool btnc_new = PORTFbits.RF0;
+    bool btnu_new = PORTBbits.RB1;
+    bool btnr_new = PORTBbits.RB8;
+    bool btnd_new = PORTAbits.RA15;
+    bool btnl_new = PORTBbits.RB0;
+    
+    if((btnc_new != btnc_old) && btnc_new)
+    {
+        strcpy(UDP_Send_Buffer, "BTNC\n\r");
+        UDP_bytes_to_send = strlen(UDP_Send_Buffer);
+        UDP_Send_Packet = true;       
+    }
+    
+    if((btnu_new != btnu_old) && btnu_new)
+    {
+        strcpy(UDP_Send_Buffer, "BTNU\n\r");
+        UDP_bytes_to_send = strlen(UDP_Send_Buffer);
+        UDP_Send_Packet = true;       
+    }
+    
+    if((btnr_new != btnr_old) && btnr_new)
+    {
+        strcpy(UDP_Send_Buffer, "BTNR\n\r");
+        UDP_bytes_to_send = strlen(UDP_Send_Buffer);
+        UDP_Send_Packet = true;       
+    }
+    
+    if((btnd_new != btnd_old) && btnd_new)
+    {
+        strcpy(UDP_Send_Buffer, "BTND\n\r");
+        UDP_bytes_to_send = strlen(UDP_Send_Buffer);
+        UDP_Send_Packet = true;       
+    }
+    
+    if((btnl_new != btnl_old) && btnl_new)
+    {
+        strcpy(UDP_Send_Buffer, "BTNL\n\r");
+        UDP_bytes_to_send = strlen(UDP_Send_Buffer);
+        UDP_Send_Packet = true;       
+    }
+    
+    btnc_old = btnc_new;
+    btnu_old = btnu_new;
+    btnr_old = btnr_new;
+    btnd_old = btnd_new;
+    btnl_old = btnl_new;
 }
 
 void RGB_Task()
 {
-    //if(timer_1m) {               // Interruption ï¿½ chaque 1 ms
+    //if(timer_1m) {               // Interruption à chaque 1 ms
         //timer_1m = 0;            // Reset the compteur to capture the next event
         //Toute pour la Moyenne fait directement dans la MX3 avec la fonction GestionMoyenne dans accel.c
         Intense[0] = (MoyenneX*255)/2096;
@@ -176,7 +260,7 @@ void RGB_Task()
           Last_Intense[0] = Intense[0];  
         }
 
-        RGBLED_SetValue(Intense[0], Intense[1], Intense[2]); 
+        //RGBLED_SetValue(Intense[0], Intense[1], Intense[2]); 
     //}
 }
 
@@ -200,21 +284,20 @@ void MAIN_Initialize ( void )
      
     /* Place the App state machine in its initial state. */
     mainData.state = MAIN_STATE_INIT;
+
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
-        uint8_t dist_sensor_en = 0;
-        
-    OC1_Init();         // Set up Output Compare
-    Timer3_Init();      // Required for OC1
-    SPI1_I2S_Config();  // SPI2 in Iï¿½S mode
+    init_timer3();
+
     UDP_Initialize(); // Initialisation de du serveur et client UDP
-    LCD_Init(); // Initialisation de l'ï¿½cran LCD
-//    ACL_Init(); // Initialisation de l'accï¿½lï¿½romï¿½tre
-    SSD_Init(); // Initialisation du Timer4 et de l'accï¿½lï¿½romï¿½tre
-//    Interupt_ACL_Init(); //Initialisation de l'interuption de l'accï¿½lï¿½romï¿½tre
-//    RGBLED_Init();
-    LED_Init(); // Initialisation des LEDs
-//    Initialize_ADC_Microphone(); 
-    initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
+    //LCD_Init(); // Initialisation de l'écran LCD
+    //ACL_Init(); // Initialisation de l'accéléromètre
+    init_adc();
+    SSD_Close();
+    //SSD_Init(); // Initialisation du Timer4 et de l'accéléromètre
+    //Interupt_ACL_Init(); //Initialisation de l'interuption de l'accéléromètre
+    //RGBLED_Init();
+    Init_GestionDonnees();
+    //initialize_timer_interrupt();
     macro_enable_interrupts();
     
 }
@@ -223,12 +306,12 @@ void MAIN_Initialize ( void )
 /******************************************************************************
   Function:
     void MAIN_Tasks ( void )
- * Fonction qui execute les tï¿½ches de l'application. Cette fonction est une
- * machien d'ï¿½tat :
- * 1. MAIN_STATE_INIT; Initialise les pï¿½riphï¿½rique de communication USART et 
- *    passe ï¿½ l'ï¿½tat 2 quand l'initialisation est terminï¿½e.
- * 2. MAIN_STATE_SERVICE_TASKS; Execute les tï¿½ches de l'application. Ne change 
- * jamais d'ï¿½tat.
+ * Fonction qui execute les tâches de l'application. Cette fonction est une
+ * machien d'état :
+ * 1. MAIN_STATE_INIT; Initialise les périphérique de communication USART et 
+ *    passe à l'état 2 quand l'initialisation est terminée.
+ * 2. MAIN_STATE_SERVICE_TASKS; Execute les tâches de l'application. Ne change 
+ * jamais d'état.
 
   Remarks:
     See prototype in main.h.
@@ -262,11 +345,13 @@ void MAIN_Tasks ( void )
 
         case MAIN_STATE_SERVICE_TASKS:
         {
-            RGB_Task();
+            LedTask(); //toggle LED1 à tout les 500000 cycles
+            //RGB_Task();
+            send_adc_val();
             UDP_Tasks();
             ManageSwitches();
-            updateState();
         	JB1Toggle();
+            LED0Toggle();
             break;
         }
 
@@ -279,15 +364,14 @@ void MAIN_Tasks ( void )
     }
 }
 
-
-
 int main(void) {
+    
     SYS_Initialize(NULL);
     MAIN_Initialize();
     SYS_INT_Enable();
+//    SSD_WriteDigitsGrouped(0xFA9B,0x1);
     SSD_Close();
-//    LCD_WriteStringAtPos("Projet S4: ANC", 1, 0);
-    
+
     while (1) {
         SYS_Tasks();
         MAIN_Tasks();

@@ -57,6 +57,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "tcpip/tcpip.h"
 
+#include "analogdc.h"
+
 #include "app_commands.h"
 #define SERVER_PORT 8080
 int8_t _UDP_PumpDNS(const char * hostname, IPV4_ADDR *ipv4Addr);
@@ -219,9 +221,11 @@ void _UDP_ClientTasks() {
                 SYS_CONSOLE_MESSAGE("Client: No Space in Stack\r\n");
                 break;
             }
-            SYS_CONSOLE_PRINT("Avail %d\r\n", TCPIP_UDP_PutIsReady(appData.clientSocket));
+            //SYS_CONSOLE_PRINT("Avail %d\r\n", TCPIP_UDP_PutIsReady(appData.clientSocket));
             UDP_bytes_to_send = strlen(UDP_Send_Buffer);
-            SYS_CONSOLE_PRINT("Client: Sending %s", UDP_Send_Buffer);
+            //SYS_CONSOLE_PRINT("Client: Sending %s \r\n", UDP_Send_Buffer);
+            SYS_CONSOLE_PRINT("Sum : %s \r\n", charSum);
+
             TCPIP_UDP_ArrayPut(appData.clientSocket, (uint8_t*)UDP_Send_Buffer, UDP_bytes_to_send);
             
            // Envoie les données (flush = envoie obligatoire des données dans la pile, peu importe la quantité de données)
