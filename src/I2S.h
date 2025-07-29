@@ -26,6 +26,11 @@ extern "C" {
     
 // Threshold level for onboard microphone
 #define MIC_THRESHOLD 512
+#define DATA_LEN 1024
+   
+volatile uint8_t dataReady;
+volatile char dataChar[DATA_LEN];
+volatile uint16_t dataPtr;
     
 void OC1_Init(void);
 

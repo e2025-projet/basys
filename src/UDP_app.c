@@ -54,11 +54,13 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 
 #include "UDP_app.h"
-
+#include "I2S.h"
 #include "tcpip/tcpip.h"
 
 #include "app_commands.h"
 #define SERVER_PORT 8080
+
+uint32_t ticks_comm = 0;
 int8_t _UDP_PumpDNS(const char * hostname, IPV4_ADDR *ipv4Addr);
 // *****************************************************************************
 // *****************************************************************************
@@ -148,6 +150,12 @@ void _UDP_ClientTasks() {
      * Retourne à l'état 1 en boucle
      */
     
+    if (dataReady == 1) {
+        //strcpy(UDP_Send_Buffer, dataChar);
+        UDP_Send_Packet = true;    
+        dataReady = 0;
+    }
+    
     switch(appData.clientState) {
         case UDP_TCPIP_WAITING_FOR_COMMAND: {
             SYS_CMD_READY_TO_READ();
@@ -219,11 +227,13 @@ void _UDP_ClientTasks() {
                 SYS_CONSOLE_MESSAGE("Client: No Space in Stack\r\n");
                 break;
             }
-            SYS_CONSOLE_PRINT("Avail %d\r\n", TCPIP_UDP_PutIsReady(appData.clientSocket));
-            UDP_bytes_to_send = strlen(UDP_Send_Buffer);
-            SYS_CONSOLE_PRINT("Client: Sending %s", UDP_Send_Buffer);
+            //SYS_CONSOLE_PRINT("Avail %d\r\n", TCPIP_UDP_PutIsReady(appData.clientSocket));
+            //UDP_bytes_to_send = strlen(UDP_Send_Buffer);
+            UDP_bytes_to_send = DATA_LEN;
+            //SYS_CONSOLE_PRINT("Client: Sending %s", UDP_Send_Buffer);
+            ticks_comm = (int32_t)_CP0_GET_COUNT();
             TCPIP_UDP_ArrayPut(appData.clientSocket, (uint8_t*)UDP_Send_Buffer, UDP_bytes_to_send);
-            
+            SYS_CONSOLE_PRINT("Client: Tick comm %lu\n\r", ticks_comm);
            // Envoie les données (flush = envoie obligatoire des données dans la pile, peu importe la quantité de données)
             TCPIP_UDP_Flush(appData.clientSocket);
             appData.clientState = UDP_TCPIP_WAIT_FOR_RESPONSE;
@@ -259,6 +269,8 @@ void _UDP_ClientTasks() {
                 }
                 UDP_Receive_Buffer[UDP_bytes_received] = '\0';    //append a null to display strings properly
                 SYS_CONSOLE_PRINT("\r\nClient: Client received %s\r\n", UDP_Receive_Buffer);
+                uint32_t diff_ticks = _CP0_GET_COUNT() - ticks_comm;
+                SYS_CONSOLE_PRINT("\r\nCPU clocks needed: %d\r\n", diff_ticks);
                 
                 // Pas de fermeture du socket on veux une connection continue
                 appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;

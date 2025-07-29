@@ -22,8 +22,10 @@
 #include "lcd.h"
 
 #include <stdio.h>
+#include <stdbool.h>
 #include "I2S.h"
 #include "gain_out.h"
+#include "app_commands.h"
 
 #include "filterIIRCoeffs.h"
 
@@ -105,9 +107,7 @@ void Timer3_Init(void)
   
 void SPI1_I2S_Config(void)
 {
-    TRISFbits.TRISF5 = 1;
-    TRISFbits.TRISF4 = 1;
-    
+
     // --- Set SPI pins ---
     TRISFbits.TRISF8 = 0;         // SS2 output
     TRISFbits.TRISF6 = 1;         // SDI input ()
@@ -231,6 +231,17 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
         LATACLR = 0xFF; 
         // Turn on LEDs depending on the current volume level
         LATASET = left_level | right_level;
+        
+        if (dataReady == 0) {
+            UDP_Send_Buffer[dataPtr++] = (uint8_t)left;
+//            dataChar[dataPtr++] = (uint8_t) (right >> 1) & 0xFF;
+            
+            if (dataPtr >= DATA_LEN) {
+                dataPtr = 0;
+                dataReady = 1;
+            }
+
+        }
     }
 
     IFS1bits.SPI1RXIF = 0; // Clear interrupt flag

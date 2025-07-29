@@ -132,8 +132,8 @@ void ManageSwitches()
     bool sw0_new = SWITCH0StateGet();
     if((sw0_new != sw0_old) && sw0_new)
     {
-        //strcpy(UDP_Send_Buffer, "Bonjour S4\n\r");
-        //UDP_bytes_to_send = strlen(UDP_Send_Buffer);
+        strcpy(UDP_Send_Buffer, "Bonjour S4\n\r");
+        UDP_bytes_to_send = strlen(UDP_Send_Buffer);
         UDP_Send_Packet = true;       
     }
 
@@ -203,15 +203,24 @@ void MAIN_Initialize ( void )
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
         uint8_t dist_sensor_en = 0;
         
-    OC1_Init();         // Set up Output Compare
+    //OC1_Init();         // Set up Output Compare
     Timer3_Init();      // Required for OC1
     SPI1_I2S_Config();  // SPI2 in I�S mode
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LCD_Init(); // Initialisation de l'�cran LCD
+    
+    T4CONbits.ON = 0;// turn off Timer1
+    // turn off digits
+    lat_SSD_AN1 = 1; // deactivate digit 1;
+    lat_SSD_AN2 = 1; // deactivate digit 2;    
+    lat_SSD_AN3 = 1; // deactivate digit 3;   
+    lat_SSD_AN0 = 1; // deactivate digit 0;
+    
 //    ACL_Init(); // Initialisation de l'acc�l�rom�tre
-    SSD_Init(); // Initialisation du Timer4 et de l'acc�l�rom�tre
+//    SSD_Init(); // Initialisation du Timer4 et de l'acc�l�rom�tre
 //    Interupt_ACL_Init(); //Initialisation de l'interuption de l'acc�l�rom�tre
 //    RGBLED_Init();
+    
     LED_Init(); // Initialisation des LEDs
 //    Initialize_ADC_Microphone(); 
     initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
