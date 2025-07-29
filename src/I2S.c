@@ -1,4 +1,4 @@
-/* ************************************************************************** */
+  /* ************************************************************************** */
 /** Descriptive File Name
 
   @Company
@@ -156,6 +156,7 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
 
     // Read all samples in FIFO
     while (SPI1STATbits.RXBUFELM > 1) {
+        // If SW3 is on, invert the left/right microphones inputs so it matches with the LEDs
         if (prt_SWT_SWT3) {
             left_raw  = SPI1BUF;
             right_raw = SPI1BUF;
@@ -163,17 +164,19 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
             right_raw  = SPI1BUF;
             left_raw = SPI1BUF;
         }
-
-        // Convert to mono
-        int32_t left  = ((int32_t)left_raw) >> 14; // 32 bits to 24 bits
-        int32_t right = ((int32_t)right_raw) >> 14;    
-
+        
+        // Convert each channel to 18 bits
+        int32_t left  = ((int32_t)left_raw) >> 14; 
+        int32_t right = ((int32_t)right_raw) >> 14; 
+        
+        // Enable/disable the IIR lowpass filter based on SW2
+        uint8_t IIREnabled = !prt_SWT_SWT2;
+        // Inputs/outputs for the IIR 4th order lowpass filter 
         int32_t in_left, out_left, in_right, out_right, nSOS = 0;
         
+        // Intialize inputs for the IIR filter
         in_left = left;
         in_right = right;
-        
-        uint8_t IIREnabled = !prt_SWT_SWT2;
         
         // If IIR filtering is enabled, real-time calculation of the next output sample
         if (IIREnabled) {
@@ -182,11 +185,11 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
             
              for (nSOS = 0; nSOS < N_SOS_SECTIONS; nSOS++) {
 
-                // 1) y[n] = b0·x[n] + v[n?1]
+                // 1) y[n] = b0·x[n] + v[n1]
                 out_left = IIRCoeffs[nSOS][0] * in_left + IIRv_left[nSOS];
                 out_right = IIRCoeffs[nSOS][0] * in_right + IIRv_right[nSOS];
                 
-                // ramener de Q28 à Q15
+                // Convert back to 16 bits
                 out_left = (int16_t)(out_left >> 13);
                 out_right = (int16_t)(out_right >> 13);
 
@@ -218,7 +221,7 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
         
         // Calculate the index level
         uint8_t index_level_left = (compress_audio_linear(left) - 700) / 105; 
-        uint8_t index_level_right = (compress_audio_linear(right) - 620) / 105; 
+        uint8_t index_level_right = (compress_audio_linear(right) - 660) / 105; 
 
         // Load the proper fields for LD7 to LD0 in their corresponding LUTs
         right_level = right_level_patterns[index_level_right] & 0x0F; 
