@@ -21,8 +21,8 @@ void UDP_Initialize ( void ) {
 
 uint32_t ticks_comm = 0;
 uint32_t last_cpu_send = 0;
-//#define MIN_DELTA 3000000
-#define MIN_DELTA 48000000
+#define MIN_DELTA 3000000
+//#define MIN_DELTA 48000000
 
 void _UDP_ClientTasks() {
     /*
