@@ -24,7 +24,7 @@ void UDP_Initialize ( void ) {
 }
 
 uint32_t last_cpu_send = 0;
-#define MIN_DELTA 3200000
+#define MIN_DELTA 3000000
 
 void _UDP_ClientTasks() {
     /*
@@ -127,9 +127,7 @@ void _UDP_ClientTasks() {
             }
             UDP_bytes_to_send = DATA_LEN;
             
-            uint32_t diff_ticks = ticks_comm - last_cpu_send;
-            SYS_CONSOLE_PRINT("Delta tick comm %lu\n\r", diff_ticks);
-            last_cpu_send = ticks_comm;
+            
             
             //SYS_CONSOLE_PRINT("Avail %d\r\n", TCPIP_UDP_PutIsReady(appData.clientSocket));
             //UDP_bytes_to_send = strlen(UDP_Send_Buffer);
@@ -139,6 +137,9 @@ void _UDP_ClientTasks() {
             //SYS_CONSOLE_PRINT("Client: Tick comm %lu\n\r", ticks_comm);
            // Envoie les données (flush = envoie obligatoire des données dans la pile, peu importe la quantité de données)
             TCPIP_UDP_Flush(appData.clientSocket);
+            uint32_t diff_ticks = ticks_comm - last_cpu_send;
+            SYS_CONSOLE_PRINT("Delta tick comm %lu\n\r", diff_ticks);
+            last_cpu_send = ticks_comm;
             appData.clientState = UDP_TCPIP_WAIT_FOR_RESPONSE;
             appData.mTimeOut = SYS_TMR_SystemCountGet() + SYS_TMR_SystemCountFrequencyGet();
             
