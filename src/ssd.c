@@ -73,6 +73,7 @@ unsigned char digits[4];
 **      This happens faster than the human eye can notice.
 **          
 */
+/*
 void __ISR(_TIMER_4_VECTOR, IPL1AUTO) Timer4ISR(void) 
 {  
     static unsigned char idxCurrDigit = 0;
@@ -118,7 +119,7 @@ void __ISR(_TIMER_4_VECTOR, IPL1AUTO) Timer4ISR(void)
              //SYS_PRINT("%04x %04x %04x %04x %04x %04x\n\r", PORTA, TRISA, ANSELA, PORTB, TRISB, ANSELB);
     IFS0bits.T4IF = 0;       // clear interrupt flag
 }
-
+*/
 /* ------------------------------------------------------------ */
 /***	Timer1Setup
 **

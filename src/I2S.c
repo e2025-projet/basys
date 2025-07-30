@@ -273,12 +273,14 @@ uint16_t compress_audio_linear(int32_t input_24bit) {
     return result;
 }
 
+
 /* ISR de Timer2 : gère sortie audio PWM */
+/*
 void __ISR(_TIMER_3_VECTOR, IPL1AUTO) Timer3_ISR(void) { 
     
     OC1RS = (uint16_t) pwm_val * gain_out / 100;   
     IFS0bits.T3IF = 0;
-};
+};*/
 
 /* ************************** ***************************************************
  End of File

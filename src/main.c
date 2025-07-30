@@ -63,7 +63,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "gain_out.h"
 #include "app_commands.h"
 #include "fsm.h"
-
+#include "timer.h"
 MAIN_DATA mainData;
 
 static bool sw0_old; 
@@ -72,7 +72,7 @@ void ManageSwitches()
     bool sw0_new = SWITCH0StateGet();
     if((sw0_new != sw0_old) && sw0_new)
     {
-        strcpy(UDP_Send_Buffer, "Bonjour S4\n\r");
+        strcpy(UDP_Send_Buffer, "Bonjour S4 Test\n\r");
         UDP_bytes_to_send = strlen(UDP_Send_Buffer);
         UDP_Send_Packet = true;       
     }
@@ -87,14 +87,14 @@ void MAIN_Initialize ( void )
     /* Place the App state machine in its initial state. */
     mainData.state = MAIN_STATE_INIT;
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
-        uint8_t dist_sensor_en = 0;
+    uint8_t dist_sensor_en = 0;
         
     //OC1_Init();         // Set up Output Compare
-    Timer3_Init();      // Required for OC1
+    Timers_init();
     SPI1_I2S_Config();  // SPI2 in I�S mode
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LED_Init(); // Initialisation des LEDs
-    initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
+    //initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
     macro_enable_interrupts();
     
 }
@@ -142,6 +142,7 @@ void MAIN_Tasks ( void )
 
         case MAIN_STATE_SERVICE_TASKS:
         {
+            Timers_actions();
             UDP_Tasks();
             ManageSwitches();
             updateState();
