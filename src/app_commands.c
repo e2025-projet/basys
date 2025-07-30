@@ -69,7 +69,19 @@ bool UDP_Commands_Init()
     strcpy(UDP_Port_Buffer, "8080");
     memset(UDP_Receive_Buffer, 0, sizeof (UDP_Receive_Buffer));
     memset(UDP_Send_Buffer, 0, sizeof (UDP_Send_Buffer));
+    memset(UDP_Command_Buffer, 0, sizeof (UDP_Command_Buffer));
     memset(UDP_Server_Receive_Buffer, 0, sizeof (UDP_Server_Receive_Buffer));
+    
+    // "Sign" buffers
+    int i = 0;
+    for (i; i < SIGNATURE_LEN - 1; i++) {
+        UDP_Send_Buffer[i] = '~';
+        UDP_Command_Buffer[i] = '~';
+    }
+    
+    UDP_Send_Buffer[SIGNATURE_LEN-1] = 'A'; //AUDIO
+    UDP_Command_Buffer[SIGNATURE_LEN-1] = 'C'; //COMMAND
+    
     UDP_Send_Packet = false;
     // Ici un bon exemple de comment écrire dans UDP_Send_Buffer
     //strcpy(UDP_Send_Buffer,     "123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960");
@@ -81,9 +93,11 @@ bool UDP_Commands_Init()
 
 char UDP_Hostname_Buffer[MAX_URL_SIZE];
 char UDP_Port_Buffer[6];
+char UDP_Command_Buffer[MAX_PACKET_SIZE+1];
 char UDP_Send_Buffer[MAX_PACKET_SIZE+1];
 char UDP_Receive_Buffer[MAX_PACKET_SIZE+1];
 uint8_t UDP_Server_Receive_Buffer[MAX_PACKET_SIZE+1];
+uint8_t packetType;
 bool UDP_Send_Packet = false;
 bool UDP_Receive_Packet = false;
 uint16_t UDP_bytes_to_send = 0;

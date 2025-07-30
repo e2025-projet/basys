@@ -6,11 +6,9 @@
 #include "config.h"
 #include "app_commands.h"
 #define SERVER_PORT 8080
+#define UDP_VERBOSE 1
 
-uint32_t ticks_comm = 0;
 int8_t _UDP_PumpDNS(const char * hostname, IPV4_ADDR *ipv4Addr);
-
-
 UDP_DATA appData;
 
 
@@ -18,13 +16,13 @@ void UDP_Initialize ( void ) {
     appData.clientState = UDP_TCPIP_WAIT_INIT;
     appData.serverState = UDP_TCPIP_WAIT_INIT;
     
-    /* TODO: Initialize your application's state machine and other
-     */
     UDP_Commands_Init();
 }
 
+uint32_t ticks_comm = 0;
 uint32_t last_cpu_send = 0;
-#define MIN_DELTA 3000000
+//#define MIN_DELTA 3000000
+#define MIN_DELTA 48000000
 
 void _UDP_ClientTasks() {
     /*
@@ -47,8 +45,8 @@ void _UDP_ClientTasks() {
      * Retourne à l'état 1 en boucle
      */
     ticks_comm = (int32_t)_CP0_GET_COUNT();
+    
     if (dataReady == 1 && (ticks_comm - last_cpu_send) > MIN_DELTA) {
-        //strcpy(UDP_Send_Buffer, dataChar);
         UDP_Send_Packet = true;    
         dataReady = 0;
         timer4_pop = 0;
@@ -140,6 +138,9 @@ void _UDP_ClientTasks() {
             uint32_t diff_ticks = ticks_comm - last_cpu_send;
             SYS_CONSOLE_PRINT("Delta tick comm %lu\n\r", diff_ticks);
             last_cpu_send = ticks_comm;
+            // New data is ready to be sent
+            dataReady = 0;
+            timer4_pop = 0;
             appData.clientState = UDP_TCPIP_WAIT_FOR_RESPONSE;
             appData.mTimeOut = SYS_TMR_SystemCountGet() + SYS_TMR_SystemCountFrequencyGet();
             
@@ -189,6 +190,97 @@ void _UDP_ClientTasks() {
             break;
     }
 
+}
+
+void goodClientTasks ( void ) {
+    ticks_comm = (int32_t)_CP0_GET_COUNT();
+    
+    if (dataReady == 1 && (ticks_comm - last_cpu_send) > MIN_DELTA) {
+        UDP_Send_Packet = true;    
+        dataReady = 0;
+        SYS_CONSOLE_MESSAGE("\r\nPingpong\r\n");
+        timer4_pop = 0;
+    }
+    
+    switch(appData.clientState) {
+        // Waiting for UDP_Send_Packet to try to send data
+        case UDP_TCPIP_WAITING_FOR_COMMAND: {
+            SYS_CMD_READY_TO_READ();
+            if (UDP_Send_Packet) {
+                TCPIP_DNS_RESULT result;
+                UDP_Send_Packet = false;
+                result = TCPIP_DNS_RES_NAME_IS_IPADDRESS; //TCPIP_DNS_Resolve(UDP_Hostname_Buffer, TCPIP_DNS_TYPE_A);
+                if (result == TCPIP_DNS_RES_NAME_IS_IPADDRESS) {
+                    IPV4_ADDR addr;
+                    TCPIP_Helper_StringToIPAddress(UDP_Hostname_Buffer, &addr);
+                    uint16_t port = atoi(UDP_Port_Buffer);
+                    if (!TCPIP_UDP_IsConnected(appData.clientSocket)) 
+                    {
+                        appData.clientSocket = TCPIP_UDP_ClientOpen(IP_ADDRESS_TYPE_IPV4, port, (IP_MULTI_ADDRESS*) & addr);
+                        
+                        break;
+                    }
+                    if (appData.clientSocket == INVALID_SOCKET) {
+                        SYS_CONSOLE_MESSAGE("\r\nClient: Could not start connection\r\n");
+                        appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;
+                    }
+                    if (UDP_VERBOSE) {
+                        SYS_CONSOLE_MESSAGE("\r\nClient: Starting connection\r\n");
+                    }
+                    appData.clientState = UDP_TCPIP_WAIT_FOR_CONNECTION;
+                    break;
+                }
+                if (result < 0) {
+                    SYS_CONSOLE_MESSAGE("\r\nClient: Error in DNS aborting 2\r\n");
+                    break;
+                }
+                appData.clientState = UDP_TCPIP_WAIT_ON_DNS;
+            }
+        }
+        break;
+        
+        // Send data
+        case UDP_TCPIP_WAIT_FOR_CONNECTION: {
+            if (!TCPIP_UDP_IsConnected(appData.clientSocket)) {
+                SYS_CONSOLE_MESSAGE("Client: Not connected\r\n");
+                break;
+            }
+            if(TCPIP_UDP_PutIsReady(appData.clientSocket) == 0) {
+                SYS_CONSOLE_MESSAGE("Client: No Space in Stack\r\n");
+                break;
+            }
+            
+            // Determine if we are sending Audio packet or Command packet, command has priority
+            // Build data packet
+            if (packetType == 0) 
+            { // Audio packet type
+                UDP_bytes_to_send = DATA_LEN + SIGNATURE_LEN;
+                TCPIP_UDP_ArrayPut(appData.clientSocket, (uint8_t*)UDP_Send_Buffer, UDP_bytes_to_send);
+            } else if (packetType == 1) { // Command packet type
+                UDP_bytes_to_send = COMMAND_LEN + SIGNATURE_LEN;
+                TCPIP_UDP_ArrayPut(appData.clientSocket, (uint8_t*)UDP_Command_Buffer, UDP_bytes_to_send);
+            }
+            
+            
+           // Envoie les données (flush = envoie obligatoire des données dans la pile, peu importe la quantité de données)
+            TCPIP_UDP_Flush(appData.clientSocket);
+            if (UDP_VERBOSE) {
+                uint32_t diff_ticks = ticks_comm - last_cpu_send;
+                SYS_CONSOLE_PRINT("Delta tick comm %lu\n\r", diff_ticks);
+            }
+            
+            last_cpu_send = ticks_comm;
+            
+            // Tell rest of the app that data is sent, reset fields
+            dataReady = 0;
+            packetType = 0;
+            appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;
+        }
+        break;
+        
+        default:
+            break;
+    }
 }
 
 void _UDP_ServerTasks( void ) {
@@ -374,9 +466,12 @@ void UDP_Tasks ( void )
             break;
 
         default:
+            /*
             // Appelle les fonctions de client et de serveur, si la connection est établie.
             _UDP_ClientTasks(); // roule l'application client
             _UDP_ServerTasks(); // roule l'application serveur (à retirer du code final)
+            */
+            goodClientTasks();
             break;
     }
 }

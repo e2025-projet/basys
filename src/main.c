@@ -94,7 +94,7 @@ void MAIN_Initialize ( void )
     SPI1_I2S_Config();  // SPI2 in I�S mode
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LED_Init(); // Initialisation des LEDs
-    //initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
+    initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
     macro_enable_interrupts();
     
 }

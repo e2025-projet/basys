@@ -64,10 +64,17 @@ extern "C" {
 #endif
 //#define MAX_URL_SIZE 255
 #define MAX_PACKET_SIZE 1536
+#define DATA_LEN 1024
+#define SIGNATURE_LEN 3 // Bytes of definition
+#define COMMAND_LEN 3
+    
+extern uint8_t packetType; // 0 is audio, 1 is command. Determines source of sending
+
 bool UDP_Commands_Init();
 extern char UDP_Hostname_Buffer[MAX_URL_SIZE];
 extern char UDP_Port_Buffer[6];
 extern char UDP_Send_Buffer[MAX_PACKET_SIZE+1];
+extern char UDP_Command_Buffer[MAX_PACKET_SIZE+1];
 extern char UDP_Receive_Buffer[MAX_PACKET_SIZE+1];
 extern uint8_t UDP_Server_Receive_Buffer[MAX_PACKET_SIZE+1];
 extern bool UDP_Send_Packet;

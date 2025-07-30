@@ -24,14 +24,16 @@
 #include <xc.h>
 #include "sys/attribs.h"
 #include "config.h"
-
+#include <stdbool.h>
 #include "fsm.h"
 #include "gain_out.h"
 #include "lcd.h"
 #include "ssd.h"
+#include "app_commands.h"
 
 char empty_string[16] = "               ";
 anc_state_t current_state = STATE_OFF;
+anc_state_t previous_state = STATE_OFF;
 uint8_t prev_btnc = 0;
 uint32_t counter_trig = 0;
 
@@ -52,24 +54,39 @@ void updateState(void) {
         current_state = (current_state + 1) % NB_STATES;
     }
     
-    switch (current_state) {
-        case STATE_OFF:
-            break;
-        case STATE_ANC:
-            if (prt_SWT_SWT0) {
-                setDistSensor(0); // Disable distance sensor
-            } else if (counter_trig++ > 30) {
-                setDistSensor(1); // Enable distance sensor
-                enableDistISR();
-                counter_trig = 0;
-            }
-            updateGain();
-            break;
-        case STATE_HEAR_THROUGH:
-            break;
-        default:
-            break;
+    if (previous_state != current_state) {
+        switch (current_state) {
+            case STATE_OFF:
+                packetType = 1;
+                UDP_Command_Buffer[SIGNATURE_LEN] = 'O';
+                break;
+            case STATE_ANC:
+                
+                packetType = 1;
+                UDP_Command_Buffer[SIGNATURE_LEN] = 'N';
+                break;
+            case STATE_HEAR_THROUGH:
+                packetType = 1;
+                UDP_Command_Buffer[SIGNATURE_LEN] = 'H';
+                break;
+            default:
+                break;
+        }
     }
+    
+    if (current_state == STATE_ANC) {
+        if (prt_SWT_SWT0) {
+            setDistSensor(0); // Disable distance sensor
+        } else if (counter_trig++ > 30) {
+            setDistSensor(1); // Enable distance sensor
+            enableDistISR();
+            counter_trig = 0;
+        }
+        updateGain();
+    }
+    
+    previous_state = current_state;
+    
     prev_btnc = curr_btnc; // Save BTNC state for debouncing
 }
 

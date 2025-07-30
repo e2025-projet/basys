@@ -183,7 +183,7 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
             out_right = in_right;
             out_left = in_left;
             
-             for (nSOS = 0; nSOS < N_SOS_SECTIONS; nSOS++) {
+            for (nSOS = 0; nSOS < N_SOS_SECTIONS; nSOS++) {
 
                 // 1) y[n] = b0·x[n] + v[n1]
                 out_left = IIRCoeffs[nSOS][0] * in_left + IIRv_left[nSOS];
@@ -221,7 +221,7 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
         
         // Calculate the index level
         uint8_t index_level_left = (compress_audio_linear(left) - 700) / 105; 
-        uint8_t index_level_right = (compress_audio_linear(right) - 660) / 105; 
+        uint8_t index_level_right = (compress_audio_linear(right) - 640) / 105; 
 
         // Load the proper fields for LD7 to LD0 in their corresponding LUTs
         right_level = right_level_patterns[index_level_right] & 0x0F; 
@@ -233,14 +233,12 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
         LATASET = left_level | right_level;
         
         if (dataReady == 0) {
-            UDP_Send_Buffer[dataPtr++] = (uint8_t)left;
-//            dataChar[dataPtr++] = (uint8_t) (right >> 1) & 0xFF;
+            UDP_Send_Buffer[SIGNATURE_LEN + dataPtr++] = (uint8_t)left;
             
             if (dataPtr >= DATA_LEN) {
                 dataPtr = 0;
                 dataReady = 1;
             }
-
         }
     }
 
