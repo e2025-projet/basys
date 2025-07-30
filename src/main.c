@@ -59,6 +59,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "driver/spi/src/dynamic/drv_spi_internal.h"
 #include "UDP_app.h"
 #include "led.h"
+#include "lcd.h"
 #include "I2S.h"
 #include "gain_out.h"
 #include "app_commands.h"
@@ -91,6 +92,7 @@ void MAIN_Initialize ( void )
         
     //OC1_Init();         // Set up Output Compare
     Timers_init();
+    LCD_Init();
     SPI1_I2S_Config();  // SPI2 in I�S mode
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LED_Init(); // Initialisation des LEDs

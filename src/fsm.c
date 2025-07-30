@@ -61,7 +61,6 @@ void updateState(void) {
                 UDP_Command_Buffer[SIGNATURE_LEN] = 'O';
                 break;
             case STATE_ANC:
-                
                 packetType = 1;
                 UDP_Command_Buffer[SIGNATURE_LEN] = 'N';
                 break;
