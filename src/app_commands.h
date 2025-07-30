@@ -69,6 +69,9 @@ extern "C" {
 #define COMMAND_LEN 3
     
 extern uint8_t packetType; // 0 is audio, 1 is command. Determines source of sending
+extern uint8_t UDP_Check_Reception; // set to 1 when we want to check
+
+extern uint16_t zyboValue;
 
 bool UDP_Commands_Init();
 extern char UDP_Hostname_Buffer[MAX_URL_SIZE];

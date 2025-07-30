@@ -23,8 +23,10 @@
 /* ************************************************************************** */
 #include <xc.h>
 #include <sys/attribs.h>
+#include <stdbool.h>
 #include "config.h"
 #include "ssd.h"
+#include "app_commands.h"
 #include "system/command/sys_command.h"
 
 
@@ -61,7 +63,7 @@ const unsigned char digitSegments[]= {
 
 #define NO_DIGITS sizeof(digitSegments)/sizeof(digitSegments[0])
 unsigned char digits[4];
-#define TMR_TIME    0.003 // 3000 us for each tick
+#define TMR_TIME    0.000003 // 3000 us for each tick
 
 /***	Timer1ISR
 **
@@ -73,8 +75,8 @@ unsigned char digits[4];
 **      This happens faster than the human eye can notice.
 **          
 */
-/*
-void __ISR(_TIMER_4_VECTOR, IPL1AUTO) Timer4ISR(void) 
+
+void __ISR(_TIMER_4_VECTOR, IPL2AUTO) Timer4ISR(void) 
 {  
     static unsigned char idxCurrDigit = 0;
     unsigned char currDigit, idx;
@@ -82,6 +84,7 @@ void __ISR(_TIMER_4_VECTOR, IPL1AUTO) Timer4ISR(void)
     idx = (idxCurrDigit++) & 0x3;
     //SYS_PRINT("%1x ", idx);
     currDigit = digits[idx];
+    
 //     1. deactivate all digits (anodes)
     lat_SSD_AN1 = 1; // deactivate digit 1;
     lat_SSD_AN2 = 1; // deactivate digit 2;    
@@ -119,7 +122,7 @@ void __ISR(_TIMER_4_VECTOR, IPL1AUTO) Timer4ISR(void)
              //SYS_PRINT("%04x %04x %04x %04x %04x %04x\n\r", PORTA, TRISA, ANSELA, PORTB, TRISB, ANSELB);
     IFS0bits.T4IF = 0;       // clear interrupt flag
 }
-*/
+
 /* ------------------------------------------------------------ */
 /***	Timer1Setup
 **
@@ -143,16 +146,17 @@ void SSD_Timer4Setup()
   //T4CONbits.ON = 0;                   //    turn off Timer1
   PR4 = (int)(((float)(TMR_TIME * PB_FRQ) / 256) + 0.5); //set period register, generates one interrupt every 3 ms
   TMR4 = 0;                           //    initialize count to 0
-  //T4CONbits.ON = 1;                   //    turn on Timer1
+  T4CONbits.ON = 0;                   //    turn on Timer1
   T4CONbits.TCKPS = 7;                //    1:64 prescale value
   T4CONbits.TGATE = 0;                //    not gated input (the default)
   T4CONbits.TCS = 0;                  //    PCBLK input (the default)
   T4CONbits.T32 = 0;                   //    turn on Timer1
-  T4CONbits.ON = 1;                   //    turn on Timer1
-  IPC4bits.T4IP = 1;                  //    priority
-  IPC4bits.T4IS = 0;                  //    subpriority
+  
+  IPC4bits.T4IP = 2;                  //    priority
+  IPC4bits.T4IS = 7;                  //    subpriority
   IFS0bits.T4IF = 0;                  //    clear interrupt flag
   IEC0bits.T4IE = 1;                  //    enable interrupt 
+  T4CONbits.ON = 1;                   //    turn on Timer1
   //macro_enable_interrupts();          //    enable interrupts at CPU */
 }
 /* ************************************************************************** */
@@ -307,7 +311,7 @@ unsigned char SSD_GetDigitSegments(unsigned char d)
 void SSD_WriteDigits(unsigned char d1, unsigned char d2, unsigned char d3, unsigned char d4, \
         unsigned char dp1, unsigned char dp2, unsigned char dp3, unsigned char dp4)
 {
-      T4CONbits.ON = 0;                   // turn off Timer1
+    //T4CONbits.ON = 0;                   // turn off Timer1
     digits[0] = SSD_GetDigitSegments(d1);
     digits[1] = SSD_GetDigitSegments(d2);
     digits[2] = SSD_GetDigitSegments(d3);
@@ -330,7 +334,7 @@ void SSD_WriteDigits(unsigned char d1, unsigned char d2, unsigned char d3, unsig
         digits[3] |= 0x80;
     }    
     //SYS_PRINT("%1x %1x %1x %1x \n\r", digits[3], digits[2], digits[1], digits[0]);
-  T4CONbits.ON = 1;                   //  turn on Timer1
+  //T4CONbits.ON = 1;                   //  turn on Timer1
 }
 
 /* ------------------------------------------------------------ */

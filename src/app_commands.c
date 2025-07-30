@@ -81,7 +81,8 @@ bool UDP_Commands_Init()
     
     UDP_Send_Buffer[SIGNATURE_LEN-1] = 'A'; //AUDIO
     UDP_Command_Buffer[SIGNATURE_LEN-1] = 'C'; //COMMAND
-    
+    packetType = 0;
+    UDP_Check_Reception = 0;
     UDP_Send_Packet = false;
     // Ici un bon exemple de comment écrire dans UDP_Send_Buffer
     //strcpy(UDP_Send_Buffer,     "123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960");
@@ -98,6 +99,8 @@ char UDP_Send_Buffer[MAX_PACKET_SIZE+1];
 char UDP_Receive_Buffer[MAX_PACKET_SIZE+1];
 uint8_t UDP_Server_Receive_Buffer[MAX_PACKET_SIZE+1];
 uint8_t packetType;
+uint8_t UDP_Check_Reception;
+uint16_t zyboValue;
 bool UDP_Send_Packet = false;
 bool UDP_Receive_Packet = false;
 uint16_t UDP_bytes_to_send = 0;

@@ -60,7 +60,7 @@ void __ISR(_TIMER_3_VECTOR, IPL3AUTO) Timer3Handler(void) {
 }
 
 void __ISR(_TIMER_4_VECTOR, IPL3AUTO) Timer4Handler(void) {
-    timer4_pop = 1;
+    UDP_Check_Reception = 1;
     IFS0bits.T4IF = 0;
 }
 

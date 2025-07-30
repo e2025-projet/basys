@@ -16,7 +16,6 @@
           <itemPath>../src/gain_out.h</itemPath>
           <itemPath>../src/I2S.h</itemPath>
           <itemPath>../src/filterIIRCoeffs.h</itemPath>
-          <itemPath>../src/timer.h</itemPath>
         </logicalFolder>
         <logicalFolder name="f1" displayName="system_config" projectFiles="true">
           <logicalFolder name="f1" displayName="default" projectFiles="true">
@@ -220,7 +219,6 @@
           <itemPath>../src/adc.c</itemPath>
           <itemPath>../src/gain_out.c</itemPath>
           <itemPath>../src/I2S.c</itemPath>
-          <itemPath>../src/timer.c</itemPath>
         </logicalFolder>
         <logicalFolder name="f1" displayName="system_config" projectFiles="true">
           <logicalFolder name="f1" displayName="default" projectFiles="true">

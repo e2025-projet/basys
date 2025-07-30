@@ -61,10 +61,10 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "led.h"
 #include "lcd.h"
 #include "I2S.h"
+#include "ssd.h"
 #include "gain_out.h"
 #include "app_commands.h"
 #include "fsm.h"
-#include "timer.h"
 MAIN_DATA mainData;
 
 static bool sw0_old; 
@@ -91,11 +91,11 @@ void MAIN_Initialize ( void )
     uint8_t dist_sensor_en = 0;
         
     //OC1_Init();         // Set up Output Compare
-    Timers_init();
     LCD_Init();
     SPI1_I2S_Config();  // SPI2 in I�S mode
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LED_Init(); // Initialisation des LEDs
+    SSD_Init();
     initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
     macro_enable_interrupts();
     
@@ -115,6 +115,16 @@ void MAIN_Initialize ( void )
   Remarks:
     See prototype in main.h.
  */
+void displayBlinkValue(uint16_t val) {
+    uint8_t d0 = val % 10;
+    uint8_t d1 = (val / 10) % 10;
+    uint8_t d2 = (val / 100) % 10;
+    uint8_t d3 = (val / 1000) % 10;
+
+    SSD_WriteDigitsGrouped((d3 << 12) | (d2 << 8) | (d1 << 4) | d0, 0x0);
+}
+
+uint32_t displayCounter = 0;
 
 void MAIN_Tasks ( void )
 {
@@ -144,11 +154,16 @@ void MAIN_Tasks ( void )
 
         case MAIN_STATE_SERVICE_TASKS:
         {
-            Timers_actions();
             UDP_Tasks();
             ManageSwitches();
             updateState();
         	JB1Toggle();
+            
+            if (displayCounter++ > 1000) {
+                displayBlinkValue(zyboValue);
+                displayCounter = 0;
+            }
+
             break;
         }
 
@@ -167,6 +182,7 @@ int main(void) {
     SYS_Initialize(NULL);
     MAIN_Initialize();
     SYS_INT_Enable();
+    
     
     while (1) {
         SYS_Tasks();

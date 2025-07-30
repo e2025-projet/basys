@@ -32,6 +32,7 @@ void SSD_WriteDigits(unsigned char d0, unsigned char d1, unsigned char d2, unsig
             unsigned char dp1, unsigned char dp2, unsigned char dp3, unsigned char dp4);
 void SSD_WriteDigitsGrouped(unsigned int val, unsigned char dp);
 unsigned char SSD_GetDigitSegments(unsigned char d);
+void SSD_Set(uint16_t val);
 
 // private functions
 void SSD_ConfigurePins();

@@ -5,6 +5,7 @@
 #include "timer.h"
 #include "config.h"
 #include "app_commands.h"
+#include "ssd.h"
 #define SERVER_PORT 8080
 #define UDP_VERBOSE 1
 
@@ -195,32 +196,33 @@ void _UDP_ClientTasks() {
 void goodClientTasks ( void ) {
     ticks_comm = (int32_t)_CP0_GET_COUNT();
     
-    if (dataReady == 1 && (ticks_comm - last_cpu_send) > MIN_DELTA) {
+    if (dataReady == 1 && (ticks_comm - last_cpu_send) > MIN_DELTA && prt_SWT_SWT6) {
         UDP_Send_Packet = true;    
         dataReady = 0;
     }
     
-    if (timer4_pop) {
-        timer4_pop = 0;
-        if (TCPIP_UDP_IsConnected(appData.clientSocket)) {
-            uint16_t UDP_bytes_received = TCPIP_UDP_GetIsReady(appData.clientSocket);
-            if (UDP_bytes_received) {
-                
-                TCPIP_UDP_ArrayGet(appData.clientSocket, (uint8_t*)UDP_Receive_Buffer, sizeof(UDP_Receive_Buffer)-1);
-                
-                if(UDP_bytes_received > sizeof(UDP_Receive_Buffer)-1){
-                    SYS_CONSOLE_PRINT("\r\nClient: Bytes discarded %u\n\r", UDP_bytes_received - sizeof(UDP_Receive_Buffer)-1);
-                    TCPIP_UDP_Discard(appData.clientSocket);
-                    UDP_bytes_received = sizeof(UDP_Receive_Buffer)-1;
-                }
-                
-                UDP_Receive_Buffer[UDP_bytes_received] = '\0';    //append a null to display strings properly
-                if (UDP_VERBOSE) {
-                    SYS_CONSOLE_PRINT("\r\nClient: Client received %s\r\n", UDP_Receive_Buffer);
-                }
-                
-                // TODO do something with Zybo data
+    if (TCPIP_UDP_IsConnected(appData.clientSocket)) {
+        uint16_t UDP_bytes_received = TCPIP_UDP_GetIsReady(appData.clientSocket);
+        if (UDP_bytes_received) {
+
+            TCPIP_UDP_ArrayGet(appData.clientSocket, (uint8_t*)UDP_Receive_Buffer, sizeof(UDP_Receive_Buffer)-1);
+
+            if(UDP_bytes_received > sizeof(UDP_Receive_Buffer)-1){
+                SYS_CONSOLE_PRINT("\r\nClient: Bytes discarded %u\n\r", UDP_bytes_received - sizeof(UDP_Receive_Buffer)-1);
+                TCPIP_UDP_Discard(appData.clientSocket);
+                UDP_bytes_received = sizeof(UDP_Receive_Buffer)-1;
             }
+
+            UDP_Receive_Buffer[UDP_bytes_received] = '\0';    //append a null to display strings properly
+            if (UDP_VERBOSE) {
+                SYS_CONSOLE_PRINT("\r\nClient: Client received %s\r\n", UDP_Receive_Buffer);
+            }
+
+            if (UDP_bytes_received >= 5 && strncmp(UDP_Receive_Buffer, "~~b", 3) == 0) {
+                // Blink task, 
+                zyboValue = ((uint16_t)UDP_Receive_Buffer[3] << 8) | (uint8_t)UDP_Receive_Buffer[4];
+            }
+
         }
         
     }
