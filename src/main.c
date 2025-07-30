@@ -59,72 +59,12 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "driver/spi/src/dynamic/drv_spi_internal.h"
 #include "UDP_app.h"
 #include "led.h"
-#include "rgbled.h"
-#include "ssd.h"
 #include "I2S.h"
-#include "accel.h"
-#include "lcd.h"
-#include "adc.h"
 #include "gain_out.h"
 #include "app_commands.h"
 #include "fsm.h"
 
-
-//Moyenne est faite direct sur la MX3 (GestionMoyenne dans accel.c)
-//La switch qui fait afficher Moyenne sur le LCD dans accel.C
-
-
-
-// *****************************************************************************
-// *****************************************************************************
-// Section: Global Data Definitions
-// *****************************************************************************
-// *****************************************************************************
-
-// *****************************************************************************
-/* Application Data
-
-  Summary:
-    Holds application data
-
-  Description:
-    This structure holds the application's data.
-
-  Remarks:
-    This structure should be initialized by the TCPIP_Initialize function.
-    
-    Application strings and buffers are be defined outside this structure.
- */
-
 MAIN_DATA mainData;
-
-// *****************************************************************************
-// *****************************************************************************
-// Section: Application Callback Functions
-// *****************************************************************************
-// *****************************************************************************
-
-/* TODO:  Add any necessary callback functions.
- */
-
-// *****************************************************************************
-// *****************************************************************************
-// Section: Application Local Functions
-// *****************************************************************************
-// *****************************************************************************
-
-int Intense[3];
-int Last_Intense[3];
-
-void Interupt_ACL_Init(void)
-{
-    IFS0bits.INT4IF = 0;
-    IEC0bits.INT4IE = 1;
-    IPC4bits.INT4IP = 1;
-    IPC4bits.INT4IS = 0;
-    INTCONbits.INT4EP = 0;
-    INT4Rbits.INT4R = 12;    //assigner le Interupt au boutton C en mettant 4, quand ca va �tre ok mettre 12
-}
 
 static bool sw0_old; 
 void ManageSwitches()
@@ -140,60 +80,6 @@ void ManageSwitches()
     sw0_old = sw0_new; 
 }
 
-void RGB_Task()
-{
-    //if(timer_1m) {               // Interruption � chaque 1 ms
-        //timer_1m = 0;            // Reset the compteur to capture the next event
-        //Toute pour la Moyenne fait directement dans la MX3 avec la fonction GestionMoyenne dans accel.c
-        Intense[0] = (MoyenneX*255)/2096;
-        Intense[1] = (MoyenneY*255)/2096;
-        Intense[2] = (MoyenneZ*255)/2096;
-
-        if(Intense[0] <= 0)
-        {
-            Intense[0] = Last_Intense[0];
-        }
-        else
-        {
-          Last_Intense[0] = Intense[0];  
-        }
-
-        if(Intense[1] <= 0)
-        {
-            Intense[1] = Last_Intense[1];
-        }
-        else
-        {
-          Last_Intense[0] = Intense[0];  
-        }
-
-        if(Intense[2] <= 0)
-        {
-            Intense[2] = Last_Intense[2];
-        }
-        else
-        {
-          Last_Intense[0] = Intense[0];  
-        }
-
-        RGBLED_SetValue(Intense[0], Intense[1], Intense[2]); 
-    //}
-}
-
-
-// *****************************************************************************
-// *****************************************************************************
-// Section: Application Initialization and State Machine Functions
-// *****************************************************************************
-// *****************************************************************************
-
-/*******************************************************************************
-  Function:
-    void MAIN_Initialize ( void )
-
-  Remarks:
-    See prototype in main.h.
- */
 
 void MAIN_Initialize ( void )
 {
@@ -207,22 +93,7 @@ void MAIN_Initialize ( void )
     Timer3_Init();      // Required for OC1
     SPI1_I2S_Config();  // SPI2 in I�S mode
     UDP_Initialize(); // Initialisation de du serveur et client UDP
-    LCD_Init(); // Initialisation de l'�cran LCD
-    
-    T4CONbits.ON = 0;// turn off Timer1
-    // turn off digits
-    lat_SSD_AN1 = 1; // deactivate digit 1;
-    lat_SSD_AN2 = 1; // deactivate digit 2;    
-    lat_SSD_AN3 = 1; // deactivate digit 3;   
-    lat_SSD_AN0 = 1; // deactivate digit 0;
-    
-//    ACL_Init(); // Initialisation de l'acc�l�rom�tre
-//    SSD_Init(); // Initialisation du Timer4 et de l'acc�l�rom�tre
-//    Interupt_ACL_Init(); //Initialisation de l'interuption de l'acc�l�rom�tre
-//    RGBLED_Init();
-    
     LED_Init(); // Initialisation des LEDs
-//    Initialize_ADC_Microphone(); 
     initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
     macro_enable_interrupts();
     
@@ -271,7 +142,6 @@ void MAIN_Tasks ( void )
 
         case MAIN_STATE_SERVICE_TASKS:
         {
-            RGB_Task();
             UDP_Tasks();
             ManageSwitches();
             updateState();
@@ -294,8 +164,6 @@ int main(void) {
     SYS_Initialize(NULL);
     MAIN_Initialize();
     SYS_INT_Enable();
-    SSD_Close();
-//    LCD_WriteStringAtPos("Projet S4: ANC", 1, 0);
     
     while (1) {
         SYS_Tasks();

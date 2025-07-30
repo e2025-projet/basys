@@ -129,6 +129,8 @@ void UDP_Initialize ( void ) {
     UDP_Commands_Init();
 }
 
+uint32_t last_cpu_send = 0;
+
 void _UDP_ClientTasks() {
     /*
      * La tâche CLIENT de la communication UDP est une machine d'état avec les 
@@ -227,13 +229,18 @@ void _UDP_ClientTasks() {
                 SYS_CONSOLE_MESSAGE("Client: No Space in Stack\r\n");
                 break;
             }
+            UDP_bytes_to_send = DATA_LEN;
+            ticks_comm = (int32_t)_CP0_GET_COUNT();
+            uint32_t diff_ticks = ticks_comm - last_cpu_send;
+            SYS_CONSOLE_PRINT("Delta tick comm %lu\n\r", diff_ticks);
+            last_cpu_send = ticks_comm;
+            
             //SYS_CONSOLE_PRINT("Avail %d\r\n", TCPIP_UDP_PutIsReady(appData.clientSocket));
             //UDP_bytes_to_send = strlen(UDP_Send_Buffer);
-            UDP_bytes_to_send = DATA_LEN;
+            
             //SYS_CONSOLE_PRINT("Client: Sending %s", UDP_Send_Buffer);
-            ticks_comm = (int32_t)_CP0_GET_COUNT();
             TCPIP_UDP_ArrayPut(appData.clientSocket, (uint8_t*)UDP_Send_Buffer, UDP_bytes_to_send);
-            SYS_CONSOLE_PRINT("Client: Tick comm %lu\n\r", ticks_comm);
+            //SYS_CONSOLE_PRINT("Client: Tick comm %lu\n\r", ticks_comm);
            // Envoie les données (flush = envoie obligatoire des données dans la pile, peu importe la quantité de données)
             TCPIP_UDP_Flush(appData.clientSocket);
             appData.clientState = UDP_TCPIP_WAIT_FOR_RESPONSE;
@@ -268,9 +275,7 @@ void _UDP_ClientTasks() {
                     UDP_bytes_received = sizeof(UDP_Receive_Buffer)-1;
                 }
                 UDP_Receive_Buffer[UDP_bytes_received] = '\0';    //append a null to display strings properly
-                SYS_CONSOLE_PRINT("\r\nClient: Client received %s\r\n", UDP_Receive_Buffer);
-                uint32_t diff_ticks = _CP0_GET_COUNT() - ticks_comm;
-                SYS_CONSOLE_PRINT("\r\nCPU clocks needed: %d\r\n", diff_ticks);
+                
                 
                 // Pas de fermeture du socket on veux une connection continue
                 appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;
