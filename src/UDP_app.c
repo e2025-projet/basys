@@ -3,7 +3,7 @@
 #include "I2S.h"
 #include "tcpip/tcpip.h"
 #include "timer.h"
-
+#include "config.h"
 #include "app_commands.h"
 #define SERVER_PORT 8080
 
@@ -24,6 +24,7 @@ void UDP_Initialize ( void ) {
 }
 
 uint32_t last_cpu_send = 0;
+#define MIN_DELTA 3200000
 
 void _UDP_ClientTasks() {
     /*
@@ -45,8 +46,8 @@ void _UDP_ClientTasks() {
      * État 4 : UDP_TCPIP_WAIT_FOR_RESPONSE
      * Retourne à l'état 1 en boucle
      */
-    
-    if (dataReady == 1 && timer4_pop) {
+    ticks_comm = (int32_t)_CP0_GET_COUNT();
+    if (dataReady == 1 && (ticks_comm - last_cpu_send) > MIN_DELTA) {
         //strcpy(UDP_Send_Buffer, dataChar);
         UDP_Send_Packet = true;    
         dataReady = 0;
@@ -125,7 +126,7 @@ void _UDP_ClientTasks() {
                 break;
             }
             UDP_bytes_to_send = DATA_LEN;
-            ticks_comm = (int32_t)_CP0_GET_COUNT();
+            
             uint32_t diff_ticks = ticks_comm - last_cpu_send;
             SYS_CONSOLE_PRINT("Delta tick comm %lu\n\r", diff_ticks);
             last_cpu_send = ticks_comm;
@@ -140,6 +141,11 @@ void _UDP_ClientTasks() {
             TCPIP_UDP_Flush(appData.clientSocket);
             appData.clientState = UDP_TCPIP_WAIT_FOR_RESPONSE;
             appData.mTimeOut = SYS_TMR_SystemCountGet() + SYS_TMR_SystemCountFrequencyGet();
+            
+            if (prt_SWT_SWT5) {
+                // Fuck la response
+                appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;
+            } 
             //SYS_CONSOLE_PRINT("Client: Timeout %lu\n\r", appData.mTimeOut);
         }
         break;
