@@ -36,12 +36,14 @@ void _init_timer3() {
 }
 
 // Timer4 Initialization with Interrupt
+
+// TIMER 4 HANDLES RECEPTION
 void _init_timer4() {
     T4CON = 0;
     TMR4 = 0;
     PR4 = 3016; 
 
-    T4CONbits.TCKPS = 0b000;
+    T4CONbits.TCKPS = 0b111;
     T4CONbits.TCS = 0;
     T4CONbits.T32 = 0;
 

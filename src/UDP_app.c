@@ -198,8 +198,31 @@ void goodClientTasks ( void ) {
     if (dataReady == 1 && (ticks_comm - last_cpu_send) > MIN_DELTA) {
         UDP_Send_Packet = true;    
         dataReady = 0;
-        SYS_CONSOLE_MESSAGE("\r\nPingpong\r\n");
+    }
+    
+    if (timer4_pop) {
         timer4_pop = 0;
+        if (TCPIP_UDP_IsConnected(appData.clientSocket)) {
+            uint16_t UDP_bytes_received = TCPIP_UDP_GetIsReady(appData.clientSocket);
+            if (UDP_bytes_received) {
+                
+                TCPIP_UDP_ArrayGet(appData.clientSocket, (uint8_t*)UDP_Receive_Buffer, sizeof(UDP_Receive_Buffer)-1);
+                
+                if(UDP_bytes_received > sizeof(UDP_Receive_Buffer)-1){
+                    SYS_CONSOLE_PRINT("\r\nClient: Bytes discarded %u\n\r", UDP_bytes_received - sizeof(UDP_Receive_Buffer)-1);
+                    TCPIP_UDP_Discard(appData.clientSocket);
+                    UDP_bytes_received = sizeof(UDP_Receive_Buffer)-1;
+                }
+                
+                UDP_Receive_Buffer[UDP_bytes_received] = '\0';    //append a null to display strings properly
+                if (UDP_VERBOSE) {
+                    SYS_CONSOLE_PRINT("\r\nClient: Client received %s\r\n", UDP_Receive_Buffer);
+                }
+                
+                // TODO do something with Zybo data
+            }
+        }
+        
     }
     
     switch(appData.clientState) {
