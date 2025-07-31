@@ -29,6 +29,7 @@ extern "C" {
    
 volatile uint8_t dataReady;
 volatile uint16_t dataPtr;
+volatile uint16_t pwm_val;
     
 void OC1_Init(void);
 

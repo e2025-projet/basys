@@ -380,6 +380,16 @@ void SSD_Close()
     lat_SSD_AN0 = 1; // deactivate digit 0;
 }
 
+void SSD_Open() {
+        // stop the timer
+    T4CONbits.ON = 1;// turn off Timer1
+    // turn off digits
+    lat_SSD_AN1 = 0; // deactivate digit 1;
+    lat_SSD_AN2 = 0; // deactivate digit 2;    
+    lat_SSD_AN3 = 0; // deactivate digit 3;   
+    lat_SSD_AN0 = 0; // deactivate digit 0;
+}
+
 /* *****************************************************************************
  End of File
  */

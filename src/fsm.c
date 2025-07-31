@@ -26,17 +26,26 @@
 #include "config.h"
 #include <stdbool.h>
 #include "fsm.h"
-//#include "gain_out.h"
+#include "gain_out.h"
 #include "lcd.h"
 #include "ssd.h"
 #include "app_commands.h"
 
 char empty_string[16] = "               ";
-anc_state_t current_state = STATE_OFF;
-anc_state_t previous_state = STATE_OFF;
+anc_state_t current_state = STATE_ANC;
+anc_state_t previous_state = STATE_ANC;
 uint8_t prev_btnc = 0;
 uint32_t counter_trig = 0;
+uint32_t displayCounter = 0;
 
+void displayBlinkValue(uint16_t val) {
+    uint8_t d0 = val % 10;
+    uint8_t d1 = (val / 10) % 10;
+    uint8_t d2 = (val / 100) % 10;
+    uint8_t d3 = (val / 1000) % 10;
+
+    SSD_WriteDigitsGrouped((d3 << 12) | (d2 << 8) | (d1 << 4) | d0, 0x0);
+}
 
 /**
  * @brief Updates the ANC system state based on button input and handles state-specific logic.
@@ -57,14 +66,17 @@ void updateState(void) {
     if (previous_state != current_state) {
         switch (current_state) {
             case STATE_OFF:
+                SSD_Close();
                 packetType = 1;
                 UDP_Command_Buffer[SIGNATURE_LEN] = 'O';
                 break;
             case STATE_ANC:
+                SSD_Open();
                 packetType = 1;
                 UDP_Command_Buffer[SIGNATURE_LEN] = 'N';
                 break;
             case STATE_HEAR_THROUGH:
+                SSD_Close();
                 packetType = 1;
                 UDP_Command_Buffer[SIGNATURE_LEN] = 'H';
                 break;
@@ -74,15 +86,18 @@ void updateState(void) {
     }
     
     if (current_state == STATE_ANC) {
-        
-//        if (prt_SWT_SWT0) {
-//            setDistSensor(0); // Disable distance sensor
-//        } else if (counter_trig++ > 30) {
-//            setDistSensor(1); // Enable distance sensor
-//            enableDistISR();
-//            counter_trig = 0;
-//        }
-//        updateGain();
+        if (displayCounter++ > 1000) {
+            displayBlinkValue(zyboValue);
+            displayCounter = 0;
+        }
+        if (prt_SWT_SWT0) {
+            setDistSensor(0); // Disable distance sensor
+        } else if (counter_trig++ > 30) {
+            setDistSensor(1); // Enable distance sensor
+            enableDistISR();
+            counter_trig = 0;
+        }
+        updateGain();
     }
     
     previous_state = current_state;
@@ -100,8 +115,8 @@ void updateState(void) {
 void displayState(void) {
     LCD_WriteStringAtPos(stateToString(current_state), 0, 0);
     if (current_state == STATE_ANC) {
-        //if (!prt_SWT_SWT7) printGain();
-        //else printDistance();
+        if (!prt_SWT_SWT7) printGain();
+        else printDistance();
     } else {
         LCD_WriteStringAtPos(empty_string, 1, 0);
     }

@@ -39,7 +39,7 @@ void SSD_ConfigurePins();
 void SSD_Timer4Setup();
 
 void SSD_Close();
-
+void SSD_Open();
 
     /* Provide C++ Compatibility */
 //#ifdef __cplusplus

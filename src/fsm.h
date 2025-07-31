@@ -47,6 +47,8 @@ char* stateToString(anc_state_t state);
  */
 void displayState();
 
+void displayBlinkValue(uint16_t val);
+
 
 /**
  * @brief Converts an ANC state enumeration to its string representation.

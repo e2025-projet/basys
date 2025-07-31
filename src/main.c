@@ -60,6 +60,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "UDP_app.h"
 #include "led.h"
 #include "lcd.h"
+#include "gain_out.h"
 #include "I2S.h"
 #include "ssd.h"
 #include "app_commands.h"
@@ -95,7 +96,7 @@ void MAIN_Initialize ( void )
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LED_Init(); // Initialisation des LEDs
     SSD_Init();
-    //initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
+    initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
     macro_enable_interrupts();
     
 }
@@ -114,16 +115,9 @@ void MAIN_Initialize ( void )
   Remarks:
     See prototype in main.h.
  */
-void displayBlinkValue(uint16_t val) {
-    uint8_t d0 = val % 10;
-    uint8_t d1 = (val / 10) % 10;
-    uint8_t d2 = (val / 100) % 10;
-    uint8_t d3 = (val / 1000) % 10;
 
-    SSD_WriteDigitsGrouped((d3 << 12) | (d2 << 8) | (d1 << 4) | d0, 0x0);
-}
 
-uint32_t displayCounter = 0;
+
 
 void MAIN_Tasks ( void )
 {
@@ -157,11 +151,7 @@ void MAIN_Tasks ( void )
             ManageSwitches();
             updateState();
         	JB1Toggle();
-            
-            if (displayCounter++ > 1000) {
-                displayBlinkValue(zyboValue);
-                displayCounter = 0;
-            }
+           
 
             break;
         }

@@ -57,7 +57,6 @@ const uint8_t left_level_patterns[] = {
 volatile uint8_t right_level = 0;
 volatile uint8_t left_level  = 0;
 
-volatile uint16_t pwm_val = 0;
 volatile uint32_t raw_left  = 0;
 volatile uint32_t raw_right  = 0;
 
@@ -72,26 +71,11 @@ int32_t mono;
 char string_spi[16];
 
 void OC1_Init(void) {
-    // Setup Timer 2
-    // Config @ 48 kHz
-    IFS0bits.T2IF = 0;       // Clear interrupt flag
-    IEC0bits.T2IE = 1;       // Enable interrupt
-    IPC2bits.T2IP = 1;       // Priority
-    IPC2bits.T2IS = 0;       // Subpriority
-    
     // Setup speaker
     RPB14R = 0b1100 ; // RD3 mapped to OC1
     TRISBbits.TRISB14 = 0;
     ANSELBbits.ANSB14 = 0;
     
-    T2CONbits.TCKPS = 0b00 ;
-    TMR2 = 0x0;
-    
-    PR2 = 1023 ; // P�riode du PWM = 1023 = PR2 + 1
-    
-    // Setup OC1
-    OC1CON = 0x0;
-   
     OC1CONbits.OC32 = 0; // 16 bit compare timer source
     OC1CONbits.OCTSEL = 0; // Timer 2 is used
     OC1CONbits.OCM = 0b110; // PWM Mode w/o fault pin
@@ -101,7 +85,6 @@ void OC1_Init(void) {
     OC1RS = 0;
     
     // Start timer then OC1
-    T2CONbits.ON = 1;
     OC1CONbits.ON = 1;
 }
 
@@ -282,14 +265,6 @@ uint16_t compress_audio_linear(int32_t input_18bit) {
     if (result <    1) result =    1;
     return result;
 }
-
-// Output timer please fchiing work man i swear
-void __ISR(_TIMER_2_VECTOR, IPL1AUTO) Timer2_ISR(void) { 
-    
-    OC1RS = pwm_val; 
-    
-    IFS0bits.T2IF = 0;
-};
 
 
 /* ISR de Timer2 : g�re sortie audio PWM */

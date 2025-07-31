@@ -23,7 +23,7 @@
 #include <xc.h>
 #include <stdio.h>
 #include "sys/attribs.h"
-
+#include "I2S.h"
 #include "gain_out.h"
 #include "lcd.h"
 #include "config.h"
@@ -64,25 +64,27 @@ volatile uint32_t counter = 0;
  * This ISR is triggered by Timer2 at a configured frequency. The pulse is used to trigger
  * an ultrasonic sensor. After sending the pulse, the ISR disables itself.
  */
-//
-//void __ISR(_TIMER_2_VECTOR, IPL7AUTO) isrTimer2Sensor() {
-//    if (!trig_done) {
-//        // Start TRIG pulse
-//        TRIG_PIN = 1;
-//        trig_done = 1;
-//    }
-//    else { // In normal conditions, counter condition is unnecessary
-//        // Drop TRIG pulse
-//        TRIG_PIN = 0;
-//        // Reset flag and counter
-//        trig_done = 0;
-//        counter = 0;
-//        // Disable Timer2 interrupt after pulse
-//        disableDistISR();
-//    }
-////    counter++;
-//    IFS0bits.T2IF = 0; // Reset interrupt flag
-//}
+
+void __ISR(_TIMER_2_VECTOR, IPL7AUTO) isrTimer2Sensor() {
+    if (!trig_done) {
+        // Start TRIG pulse
+        TRIG_PIN = 1;
+        trig_done = 1;
+    }
+    else { // In normal conditions, counter condition is unnecessary
+        // Drop TRIG pulse
+        TRIG_PIN = 0;
+        // Reset flag and counter
+        trig_done = 0;
+        counter = 0;
+        // Disable Timer2 interrupt after pulse
+        disableDistISR();
+    }
+    // Audio output
+    OC1RS = (uint16_t) pwm_val * gain_out / 100;   
+
+    IFS0bits.T2IF = 0; // Reset interrupt flag
+}
 
 
 /**
@@ -118,7 +120,7 @@ void __ISR(_EXTERNAL_3_VECTOR, IPL1AUTO) int3Handler(void) {
 
 
 /**
- * @brief Initializes the ultrasonic distance sensor system (HC-SR04).
+ * @brief Initializes the ultrasonic distance sensor system (HC-SR04). And timer 2
  *
  * @param       en_temp_correction      If != 0, adjusts speed of sound based on temperature.
  * @param       temp                    Temperature in degrees Celsius, used if correction is enabled.
@@ -136,10 +138,11 @@ void initDistSensor(uint8_t en_temp_correction, uint8_t temp) {
     
     // Configure Timer2 for sensor timing 
     T2CON = 0;              // Reset Timer2 control register
-    T2CONbits.TCKPS = 4;    // 1:16 prescale value
+    T2CONbits.TCKPS = 0;    // 1:16 prescale value
     T2CONbits.TCS = 0;      // PCBLK input (the default)
+    PR2 = 999;               // f = 100 kHz (for 10us TRIG)
     T2CONbits.ON = 1;       // Turn on Timer2
-    PR2 = 29;               // f = 100 kHz (for 10us TRIG)
+
     IEC0bits.T2IE = 1;      // Enable interrupts for Timer2
     IFS0bits.T2IF = 0;      // Reset interrupt flag
     IPC2bits.T2IP = 7;      // Set interrupt priority
@@ -167,7 +170,7 @@ void initDistSensor(uint8_t en_temp_correction, uint8_t temp) {
  * @brief Enables the Timer2 interrupt used for generating the TRIG pulse.
  */
 void enableDistISR() {
-    IEC0bits.T2IE = 1;
+//    IEC0bits.T2IE = 1;
 }
 
 
@@ -175,7 +178,7 @@ void enableDistISR() {
  * @brief Disables the Timer2 interrupt to stop triggering the TRIG pulse.
  */
 void disableDistISR() {
-    IEC0bits.T2IE = 0;
+//    IEC0bits.T2IE = 0;
 }
 
 
