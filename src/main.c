@@ -203,7 +203,7 @@ void MAIN_Initialize ( void )
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
         uint8_t dist_sensor_en = 0;
         
-    //OC1_Init();         // Set up Output Compare
+    OC1_Init();         // Set up Output Compare
     Timer3_Init();      // Required for OC1
     SPI1_I2S_Config();  // SPI2 in I�S mode
     UDP_Initialize(); // Initialisation de du serveur et client UDP

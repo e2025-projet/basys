@@ -213,11 +213,13 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
         
         int32_t mono = (prt_SWT_SWT1) ? left : right;
         
+        if (!prt_SWT_SWT3) mono =  (left + right) >> 1;
+        
         // Apply dynamic range compression instead of simple bit shifting
         uint16_t audio_value = compress_audio_linear(mono);
         
         // Apply dynamic range compression instead of simple bit shifting
-        pwm_val = audio_value;
+        pwm_val = audio_value; 
         
         // Calculate the index level
         uint8_t index_level_left = (compress_audio_linear(left) - 700) / 105; 
@@ -247,29 +249,27 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
     IFS1bits.SPI1RXIF = 0; // Clear interrupt flag
 }
 
+uint16_t compress_audio_linear(int32_t input_18bit) {
+    // 1) magnitude
+    uint32_t abs_value = (input_18bit < 0)
+                        ? (uint32_t)(-input_18bit)
+                        : (uint32_t) input_18bit;
 
-uint16_t compress_audio_linear(int32_t input_24bit) {
-    // Convert to 18-bit signed
-    int32_t input_18bit = input_24bit;
-    
-    // Get absolute value
-    uint32_t abs_value = (input_18bit < 0) ? (uint32_t)(-input_18bit) : (uint32_t)input_18bit;
-    
-    // 18-bit range is 0 to 131071, map to 0-1023
-    // But apply some compression to avoid saturation
-    
-    // Apply soft compression curve
-    if (abs_value > 65536) {
-        // Above 50% of max, compress more
-        abs_value = 65536 + ((abs_value - 65536) >> 2);
+    // 2) soft-knee at 25% of max (32768)
+    const uint32_t KNEE_POINT = (1 << 17) / 4;  // 32768
+    const uint32_t COMP_RATIO = 4;             // 4:1 post-knee
+
+    if (abs_value > KNEE_POINT) {
+        uint32_t over = abs_value - KNEE_POINT;
+        abs_value = KNEE_POINT + (over / COMP_RATIO);
     }
-    
-    // Scale to 10-bit range
-    uint16_t result = (uint16_t)(abs_value >> 4); // Divide by 128
-    
+
+    // 3) down-shift to 10 bits
+    uint16_t result = (uint16_t)(abs_value >> 4);
+
+    // 4) clamp to [1?1023]
     if (result > 1023) result = 1023;
-    if (result < 1) result = 1;
-    
+    if (result <    1) result =    1;
     return result;
 }
 
@@ -279,7 +279,6 @@ void __ISR(_TIMER_3_VECTOR, IPL1AUTO) Timer3_ISR(void) {
     OC1RS = (uint16_t) pwm_val * gain_out / 100;   
     IFS0bits.T3IF = 0;
 };
-
 /* ************************** ***************************************************
  End of File
  */
