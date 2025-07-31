@@ -320,7 +320,7 @@ void LCD_InitSequence(unsigned char bDisplaySetOptions)
 
 	//	wait 40 ms
 
-	delay39us(1025);
+//	delay39us(1025);
 	// Function Set
 	LCD_WriteCommand(cmdLcdFcnInit);
 	// Wait ~100 us

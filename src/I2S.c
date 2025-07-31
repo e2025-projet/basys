@@ -67,6 +67,7 @@ volatile uint32_t right_unsigned = 0;
 // Your I2S samples are 18-bit signed (range ? -131072 to +131071)
 const int32_t FULL_SCALE = 131072;  // 2^17
 const int32_t PWM_MAX = 1023;
+int32_t mono;
 
 char string_spi[16];
 
@@ -211,9 +212,16 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
             
         }
         
-        int32_t mono = (prt_SWT_SWT1) ? left : right;
-        
-        if (!prt_SWT_SWT3) mono =  (left + right) >> 1;
+        if (!prt_SWT_SWT3) {
+            // choose whichever channel has larger magnitude
+            if (abs(left) > abs(right))
+                mono = left;
+            else
+                mono = right;
+            }
+        else {
+            mono = prt_SWT_SWT1 ? left : right;
+        }
         
         // Apply dynamic range compression instead of simple bit shifting
         uint16_t audio_value = compress_audio_linear(mono);
