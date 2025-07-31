@@ -12,7 +12,6 @@
 int8_t _UDP_PumpDNS(const char * hostname, IPV4_ADDR *ipv4Addr);
 UDP_DATA appData;
 
-
 void UDP_Initialize ( void ) {
     appData.clientState = UDP_TCPIP_WAIT_INIT;
     appData.serverState = UDP_TCPIP_WAIT_INIT;
@@ -29,7 +28,7 @@ uint8_t response = 0;
 void goodClientTasks ( void ) {
     ticks_comm = (int32_t)_CP0_GET_COUNT();
     
-    if (dataReady == 1 && (ticks_comm - last_cpu_send) > MIN_DELTA && response == 0) {
+    if (dataReady == 1 && (ticks_comm - last_cpu_send) > MIN_DELTA && response < 2) {
         UDP_Send_Packet = true;    
         dataReady = 0;
     }
@@ -52,8 +51,11 @@ void goodClientTasks ( void ) {
             }
 
             if (UDP_bytes_received >= 5 && strncmp(UDP_Receive_Buffer, "~~b", 3) == 0) {
-                // Blink task, 
-                zyboValue = ((uint16_t)UDP_Receive_Buffer[3] << 8) | (uint8_t)UDP_Receive_Buffer[4];
+                // Blink task,
+                uint16_t receivedValue = ((uint16_t)UDP_Receive_Buffer[3] << 8) | (uint8_t)UDP_Receive_Buffer[4];
+                if (receivedValue > 30) {
+                    zyboValue = receivedValue;
+                }
             }
 
         }
@@ -115,16 +117,25 @@ void goodClientTasks ( void ) {
             if (packetType == 0) 
             { // Audio packet type
                 UDP_bytes_to_send = DATA_LEN + SIGNATURE_LEN;
+                
+                // Check response to know what to send
+                if (response == 0) { // Sending first part of 16 bit values
+                    UDP_Send_Buffer[2] = (uint8_t)'F';
+                } else if (response == 1) { // Sending second part of 16 bit values
+                    UDP_Send_Buffer[2] = (uint8_t)'S';
+                } else {
+                    UDP_Send_Buffer[2] = (uint8_t)'W'; // What
+                }
+                
                 TCPIP_UDP_ArrayPut(appData.clientSocket, (uint8_t*)UDP_Send_Buffer, UDP_bytes_to_send);
             } else if (packetType == 1) { // Command packet type
                 UDP_bytes_to_send = COMMAND_LEN + SIGNATURE_LEN;
                 TCPIP_UDP_ArrayPut(appData.clientSocket, (uint8_t*)UDP_Command_Buffer, UDP_bytes_to_send);
             }
             
-            
            // Envoie les données (flush = envoie obligatoire des données dans la pile, peu importe la quantité de données)
             TCPIP_UDP_Flush(appData.clientSocket);
-            response = 1;
+            response += 1;
             if (UDP_VERBOSE) {
                 uint32_t diff_ticks = ticks_comm - last_cpu_send;
                 SYS_CONSOLE_PRINT("Delta tick comm %lu\r\n", diff_ticks);

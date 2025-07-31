@@ -213,6 +213,8 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
         
         int32_t mono = (prt_SWT_SWT1) ? left : right;
         
+        if (prt_SWT_SWT3) mono = (left + right) >> 1;
+        
         // Apply dynamic range compression instead of simple bit shifting
         uint16_t audio_value = compress_audio_linear(mono);
         
@@ -233,7 +235,11 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
         LATASET = left_level | right_level;
         
         if (dataReady == 0) {
-            UDP_Send_Buffer[SIGNATURE_LEN + dataPtr++] = (uint8_t)left;
+            uint8_t MSB_send = mono >> 10 & 0xFF;
+            uint8_t LSB_send = mono >> 2 & 0xFF;
+            // 18 bits -> 2x 8 bits
+            UDP_Send_Buffer[SIGNATURE_LEN + dataPtr++] = MSB_send;
+            UDP_Send_Buffer[SIGNATURE_LEN + dataPtr++] = LSB_send;
             
             if (dataPtr >= DATA_LEN) {
                 dataPtr = 0;
