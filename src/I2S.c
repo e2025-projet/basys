@@ -86,7 +86,7 @@ void OC1_Init(void) {
     T2CONbits.TCKPS = 0b00 ;
     TMR2 = 0x0;
     
-    PR2 = 1023 ; // Période du PWM = 1023 = PR2 + 1
+    PR2 = 1023 ; // Pï¿½riode du PWM = 1023 = PR2 + 1
     
     // Setup OC1
     OC1CON = 0x0;
@@ -122,7 +122,7 @@ void SPI1_I2S_Config(void)
     SPI1CON2 = 0;
     SPI1STAT = 0;
    
-    // --- SPI2 I²S configuration ---
+    // --- SPI2 Iï¿½S configuration ---
     SPI1CONbits.MSTEN   = 1;      // Master mode
     SPI1CONbits.MODE32  = 1;      // 32-bit mode
     SPI1CONbits.MODE16  = 0;
@@ -130,8 +130,8 @@ void SPI1_I2S_Config(void)
     
     SPI1CONbits.SRXISEL = 0b11;
 
-    SPI1CON2bits.AUDEN  = 1;      // I²S mode
-    SPI1CON2bits.AUDMOD = 0;      // Standard I²S
+    SPI1CON2bits.AUDEN  = 1;      // Iï¿½S mode
+    SPI1CON2bits.AUDMOD = 0;      // Standard Iï¿½S
 
     SPI1BRG = 11;                  // ~3 MHz BCLK (Pclk = 48 MHz)
 
@@ -185,7 +185,7 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
             
             for (nSOS = 0; nSOS < N_SOS_SECTIONS; nSOS++) {
 
-                // 1) y[n] = b0·x[n] + v[n1]
+                // 1) y[n] = b0ï¿½x[n] + v[n1]
                 out_left = IIRCoeffs[nSOS][0] * in_left + IIRv_left[nSOS];
                 out_right = IIRCoeffs[nSOS][0] * in_right + IIRv_right[nSOS];
                 
@@ -193,11 +193,11 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
                 out_left = (int16_t)(out_left >> 13);
                 out_right = (int16_t)(out_right >> 13);
 
-                // 2) compute new v[n] = b1·x[n] ? a1·y[n] + u[n?1]
+                // 2) compute new v[n] = b1ï¿½x[n] ? a1ï¿½y[n] + u[n?1]
                 IIRv_left[nSOS] = IIRCoeffs[nSOS][1] * in_left - IIRCoeffs[nSOS][4] * out_left + IIRu_left[nSOS];
                 IIRv_right[nSOS] = IIRCoeffs[nSOS][1] * in_right - IIRCoeffs[nSOS][4] * out_right + IIRu_right[nSOS];   
                 
-                // 3) compute new u[n] = b2·x[n] ? a2·y[n]
+                // 3) compute new u[n] = b2ï¿½x[n] ? a2ï¿½y[n]
                 IIRu_left[nSOS] = IIRCoeffs[nSOS][2] * in_left - IIRCoeffs[nSOS][5] * out_left;
                 IIRu_right[nSOS] = IIRCoeffs[nSOS][2] * in_right - IIRCoeffs[nSOS][5] * out_right;
 
@@ -213,13 +213,13 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
         
         int32_t mono = (prt_SWT_SWT1) ? left : right;
         
-        if (prt_SWT_SWT3) mono = (left + right) >> 1;
+        if (!prt_SWT_SWT3) mono =  (left + right) >> 1;
         
         // Apply dynamic range compression instead of simple bit shifting
         uint16_t audio_value = compress_audio_linear(mono);
         
         // Apply dynamic range compression instead of simple bit shifting
-        pwm_val = audio_value;
+        pwm_val = audio_value; 
         
         // Calculate the index level
         uint8_t index_level_left = (compress_audio_linear(left) - 700) / 105; 
@@ -251,29 +251,27 @@ void __ISR(_SPI_1_VECTOR, IPL2AUTO) SPI1_ISR(void)
     IFS1bits.SPI1RXIF = 0; // Clear interrupt flag
 }
 
+uint16_t compress_audio_linear(int32_t input_18bit) {
+    // 1) magnitude
+    uint32_t abs_value = (input_18bit < 0)
+                        ? (uint32_t)(-input_18bit)
+                        : (uint32_t) input_18bit;
 
-uint16_t compress_audio_linear(int32_t input_24bit) {
-    // Convert to 18-bit signed
-    int32_t input_18bit = input_24bit;
-    
-    // Get absolute value
-    uint32_t abs_value = (input_18bit < 0) ? (uint32_t)(-input_18bit) : (uint32_t)input_18bit;
-    
-    // 18-bit range is 0 to 131071, map to 0-1023
-    // But apply some compression to avoid saturation
-    
-    // Apply soft compression curve
-    if (abs_value > 65536) {
-        // Above 50% of max, compress more
-        abs_value = 65536 + ((abs_value - 65536) >> 2);
+    // 2) soft-knee at 25% of max (32768)
+    const uint32_t KNEE_POINT = (1 << 17) / 4;  // 32768
+    const uint32_t COMP_RATIO = 4;             // 4:1 post-knee
+
+    if (abs_value > KNEE_POINT) {
+        uint32_t over = abs_value - KNEE_POINT;
+        abs_value = KNEE_POINT + (over / COMP_RATIO);
     }
-    
-    // Scale to 10-bit range
-    uint16_t result = (uint16_t)(abs_value >> 4); // Divide by 128
-    
+
+    // 3) down-shift to 10 bits
+    uint16_t result = (uint16_t)(abs_value >> 4);
+
+    // 4) clamp to [1?1023]
     if (result > 1023) result = 1023;
-    if (result < 1) result = 1;
-    
+    if (result <    1) result =    1;
     return result;
 }
 
@@ -286,7 +284,7 @@ void __ISR(_TIMER_2_VECTOR, IPL1AUTO) Timer2_ISR(void) {
 };
 
 
-/* ISR de Timer2 : gère sortie audio PWM */
+/* ISR de Timer2 : gï¿½re sortie audio PWM */
 /*
 void __ISR(_TIMER_3_VECTOR, IPL1AUTO) Timer3_ISR(void) { 
     
