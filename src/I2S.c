@@ -71,39 +71,39 @@ const int32_t PWM_MAX = 1023;
 char string_spi[16];
 
 void OC1_Init(void) {
+    // Setup Timer 2
+    // Config @ 48 kHz
+    IFS0bits.T2IF = 0;       // Clear interrupt flag
+    IEC0bits.T2IE = 1;       // Enable interrupt
+    IPC2bits.T2IP = 1;       // Priority
+    IPC2bits.T2IS = 0;       // Subpriority
     
-    TRISCbits.TRISC2 = 0;
-    RPC2R = 0b1100;
+    // Setup speaker
+    RPB14R = 0b1100 ; // RD3 mapped to OC1
+    TRISBbits.TRISB14 = 0;
+    ANSELBbits.ANSB14 = 0;
     
-    TRISBbits.TRISB14 = 0;   // Configure RB14 en sortie
-    ANSELBbits.ANSB14 = 0;   // Désactive l'analogique sur RB14
-
-    OC1CON  = 0;
-    OC1R    = 0;
-    OC1RS   = 0;
+    T2CONbits.TCKPS = 0b00 ;
+    TMR2 = 0x0;
     
-    RPB14R = 0x0C;            // RPB14R = 0x0C (assignation OC1 RB14)
+    PR2 = 1023 ; // Période du PWM = 1023 = PR2 + 1
     
-    OC1CONbits.OCM    = 0b110; // Mode PWM sans fault pin
-    OC1CONbits.OCTSEL = 1;     // Sélectionne Timer3 pour OC1
+    // Setup OC1
+    OC1CON = 0x0;
+   
+    OC1CONbits.OC32 = 0; // 16 bit compare timer source
+    OC1CONbits.OCTSEL = 0; // Timer 2 is used
+    OC1CONbits.OCM = 0b110; // PWM Mode w/o fault pin
+    OC1CONbits.ON = 0;
     
-    OC1CONbits.ON     = 1;     // Active OC1
+    OC1R  = 0; 
+    OC1RS = 0;
+    
+    // Start timer then OC1
+    T2CONbits.ON = 1;
+    OC1CONbits.ON = 1;
 }
 
-void Timer3_Init(void)
-{
-    T3CON = 0;
-    T3CONbits.TCKPS = 0b000;      // Prédiviseur 1:1
-    PR3             = 999;        // Valeur pour PR2 (767 - 62.5 kHz PWM base)
-    TMR3            = 0;
-    
-    IPC3bits.T3IP   = 1;          // Priorité d'interruption
-    IPC3bits.T3IS   = 0;
-    IFS0bits.T3IF   = 0;          // Efface flag
-    IEC0bits.T3IE   = 1;          // Active ISR Timer2
-    
-    T3CONbits.ON    = 1;          // Démarre Timer2
-}
   
 void SPI1_I2S_Config(void)
 {
@@ -276,6 +276,14 @@ uint16_t compress_audio_linear(int32_t input_24bit) {
     
     return result;
 }
+
+// Output timer please fchiing work man i swear
+void __ISR(_TIMER_2_VECTOR, IPL1AUTO) Timer2_ISR(void) { 
+    
+    OC1RS = pwm_val; 
+    
+    IFS0bits.T2IF = 0;
+};
 
 
 /* ISR de Timer2 : gère sortie audio PWM */

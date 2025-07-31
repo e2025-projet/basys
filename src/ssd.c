@@ -76,7 +76,7 @@ unsigned char digits[4];
 **          
 */
 
-void __ISR(_TIMER_4_VECTOR, IPL2AUTO) Timer4ISR(void) 
+void __ISR(_TIMER_4_VECTOR, IPL6AUTO) Timer4ISR(void) 
 {  
     static unsigned char idxCurrDigit = 0;
     unsigned char currDigit, idx;
@@ -152,7 +152,7 @@ void SSD_Timer4Setup()
   T4CONbits.TCS = 0;                  //    PCBLK input (the default)
   T4CONbits.T32 = 0;                   //    turn on Timer1
   
-  IPC4bits.T4IP = 2;                  //    priority
+  IPC4bits.T4IP = 6;                  //    priority
   IPC4bits.T4IS = 7;                  //    subpriority
   IFS0bits.T4IF = 0;                  //    clear interrupt flag
   IEC0bits.T4IE = 1;                  //    enable interrupt 

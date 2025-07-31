@@ -62,7 +62,6 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "lcd.h"
 #include "I2S.h"
 #include "ssd.h"
-#include "gain_out.h"
 #include "app_commands.h"
 #include "fsm.h"
 MAIN_DATA mainData;
@@ -90,13 +89,13 @@ void MAIN_Initialize ( void )
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
     uint8_t dist_sensor_en = 0;
         
-    //OC1_Init();         // Set up Output Compare
+    OC1_Init();         // Set up Output Compare
     LCD_Init();
     SPI1_I2S_Config();  // SPI2 in I�S mode
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LED_Init(); // Initialisation des LEDs
     SSD_Init();
-    initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
+    //initDistSensor(dist_sensor_en, DEFAULT_AMB_TEMP);
     macro_enable_interrupts();
     
 }

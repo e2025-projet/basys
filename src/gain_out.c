@@ -64,25 +64,25 @@ volatile uint32_t counter = 0;
  * This ISR is triggered by Timer2 at a configured frequency. The pulse is used to trigger
  * an ultrasonic sensor. After sending the pulse, the ISR disables itself.
  */
-
-void __ISR(_TIMER_2_VECTOR, IPL7AUTO) isrTimer2Sensor() {
-    if (!trig_done) {
-        // Start TRIG pulse
-        TRIG_PIN = 1;
-        trig_done = 1;
-    }
-    else { // In normal conditions, counter condition is unnecessary
-        // Drop TRIG pulse
-        TRIG_PIN = 0;
-        // Reset flag and counter
-        trig_done = 0;
-        counter = 0;
-        // Disable Timer2 interrupt after pulse
-        disableDistISR();
-    }
-//    counter++;
-    IFS0bits.T2IF = 0; // Reset interrupt flag
-}
+//
+//void __ISR(_TIMER_2_VECTOR, IPL7AUTO) isrTimer2Sensor() {
+//    if (!trig_done) {
+//        // Start TRIG pulse
+//        TRIG_PIN = 1;
+//        trig_done = 1;
+//    }
+//    else { // In normal conditions, counter condition is unnecessary
+//        // Drop TRIG pulse
+//        TRIG_PIN = 0;
+//        // Reset flag and counter
+//        trig_done = 0;
+//        counter = 0;
+//        // Disable Timer2 interrupt after pulse
+//        disableDistISR();
+//    }
+////    counter++;
+//    IFS0bits.T2IF = 0; // Reset interrupt flag
+//}
 
 
 /**
