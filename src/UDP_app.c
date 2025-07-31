@@ -1,154 +1,69 @@
-/*******************************************************************************
-  MPLAB Harmony Application Source File
-  
-  Company:
-    Microchip Technology Inc.
-  
-  File Name:
-    app.c
-
-  Summary:
-    This file contains the source code for the MPLAB Harmony application.
-
-  Description:
-    This file contains the source code for the MPLAB Harmony application.  It 
-    implements the logic of the application's state machine and it may call 
-    API routines of other MPLAB Harmony modules in the system, such as drivers,
-    system services, and middleware.  However, it does not call any of the
-    system interfaces (such as the "Initialize" and "Tasks" functions) of any of
-    the modules in the system or make any assumptions about when those functions
-    are called.  That is the responsibility of the configuration-specific system
-    files.
- *******************************************************************************/
-
-// DOM-IGNORE-BEGIN
-/*******************************************************************************
-Copyright (c) 2013-2014 released Microchip Technology Inc.  All rights reserved.
-
-Microchip licenses to you the right to use, modify, copy and distribute
-Software only when embedded on a Microchip microcontroller or digital signal
-controller that is integrated into your product or third party product
-(pursuant to the sublicense terms in the accompanying license agreement).
-
-You should refer to the license agreement accompanying this Software for
-additional information regarding your rights and obligations.
-
-SOFTWARE AND DOCUMENTATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,
-EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF
-MERCHANTABILITY, TITLE, NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE.
-IN NO EVENT SHALL MICROCHIP OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER
-CONTRACT, NEGLIGENCE, STRICT LIABILITY, CONTRIBUTION, BREACH OF WARRANTY, OR
-OTHER LEGAL EQUITABLE THEORY ANY DIRECT OR INDIRECT DAMAGES OR EXPENSES
-INCLUDING BUT NOT LIMITED TO ANY INCIDENTAL, SPECIAL, INDIRECT, PUNITIVE OR
-CONSEQUENTIAL DAMAGES, LOST PROFITS OR LOST DATA, COST OF PROCUREMENT OF
-SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
-(INCLUDING BUT NOT LIMITED TO ANY DEFENSE THEREOF), OR OTHER SIMILAR COSTS.
- *******************************************************************************/
-// DOM-IGNORE-END
-
-
-// *****************************************************************************
-// *****************************************************************************
-// Section: Included Files 
-// *****************************************************************************
-// *****************************************************************************
 
 #include "UDP_app.h"
-
+#include "I2S.h"
 #include "tcpip/tcpip.h"
-
+#include "timer.h"
+#include "config.h"
 #include "app_commands.h"
+#include "ssd.h"
 #define SERVER_PORT 8080
+#define UDP_VERBOSE 1
+
 int8_t _UDP_PumpDNS(const char * hostname, IPV4_ADDR *ipv4Addr);
-// *****************************************************************************
-// *****************************************************************************
-// Section: Global Data Definitions
-// *****************************************************************************
-// *****************************************************************************
-
-// *****************************************************************************
-/* Application Data
-
-  Summary:
-    Holds application data
-
-  Description:
-    This structure holds the application's data.
-
-  Remarks:
-    This structure should be initialized by the UDP_Initialize function.
-    
-    Application strings and buffers are be defined outside this structure.
-*/
-
 UDP_DATA appData;
-
-
-// *****************************************************************************
-// *****************************************************************************
-// Section: Application Callback Functions
-// *****************************************************************************
-// *****************************************************************************
-
-/* TODO:  Add any necessary callback functions.
-*/
-
-
-// *****************************************************************************
-// *****************************************************************************
-// Section: Application Local Functions
-// *****************************************************************************
-// *****************************************************************************
-
-/* TODO:  Add any necessary local functions.
-*/
-
-
-// *****************************************************************************
-// *****************************************************************************
-// Section: Application Initialization and State Machine Functions
-// *****************************************************************************
-// *****************************************************************************
-
-/*******************************************************************************
-  Function:
-    void UDP_Initialize ( void )
-
-  Remarks:
-    See prototype in app.h.
- */
 
 void UDP_Initialize ( void ) {
     appData.clientState = UDP_TCPIP_WAIT_INIT;
     appData.serverState = UDP_TCPIP_WAIT_INIT;
     
-    /* TODO: Initialize your application's state machine and other
-     */
     UDP_Commands_Init();
 }
 
-void _UDP_ClientTasks() {
-    /*
-     * La tâche CLIENT de la communication UDP est une machine d'état avec les 
-     * états suivant:
-     * appData.clientState
-     * État 1 : UDP_TCPIP_WAITING_FOR_COMMAND; État qui vérifie si une requête 
-     *          est prête à être envoyer au serveur et essaie d'ouvrir une 
-     *          connection au serveur. Si l'adresse IP est valide, il essaie 
-     *          d'ouvrir un socket si ce n'est pas déjà fait. Si la connection 
-     *          est réussis va à l'état 3, sinon va à l'état 1. Si l'adresse IP 
-     *          est invalide, va à l'état 2.
-     * État 2 : UDP_TCPIP_WAIT_ON_DNS; État qui vérifie l'adresse reçus valide 
-     *          si c'est une adresse IPV4 et la compare à l'adresse du serveur.
-     *          Retourne à l'état 1 si aucune connection est faite. Si la 
-     *          connection est fait va à l'état 3.
-     * État 3 : UDP_TCPIP_WAIT_FOR_CONNECTION; État qui vérifie si la connection 
-     *          est disponible.
-     * État 4 : UDP_TCPIP_WAIT_FOR_RESPONSE
-     * Retourne à l'état 1 en boucle
-     */
+uint32_t ticks_comm = 0;
+uint32_t last_cpu_send = 0;
+//#define MIN_DELTA 3000000
+#define MIN_DELTA 48000000
+uint8_t response = 0;
+
+void goodClientTasks ( void ) {
+    ticks_comm = (int32_t)_CP0_GET_COUNT();
+    
+    if (dataReady == 1 && (ticks_comm - last_cpu_send) > MIN_DELTA && response < 2) {
+        UDP_Send_Packet = true;    
+        dataReady = 0;
+    }
+    
+    if (TCPIP_UDP_IsConnected(appData.clientSocket)) {
+        uint16_t UDP_bytes_received = TCPIP_UDP_GetIsReady(appData.clientSocket);
+        if (UDP_bytes_received) {
+            response = 0;
+            TCPIP_UDP_ArrayGet(appData.clientSocket, (uint8_t*)UDP_Receive_Buffer, sizeof(UDP_Receive_Buffer)-1);
+
+            if(UDP_bytes_received > sizeof(UDP_Receive_Buffer)-1){
+                SYS_CONSOLE_PRINT("\r\nClient: Bytes discarded %u\n\r", UDP_bytes_received - sizeof(UDP_Receive_Buffer)-1);
+                TCPIP_UDP_Discard(appData.clientSocket);
+                UDP_bytes_received = sizeof(UDP_Receive_Buffer)-1;
+            }
+
+            UDP_Receive_Buffer[UDP_bytes_received] = '\0';    //append a null to display strings properly
+            if (UDP_VERBOSE) {
+                SYS_CONSOLE_PRINT("\r\nClient: Client received %s\r\n", UDP_Receive_Buffer);
+            }
+
+            if (UDP_bytes_received >= 5 && strncmp(UDP_Receive_Buffer, "~~b", 3) == 0) {
+                // Blink task,
+                uint16_t receivedValue = ((uint16_t)UDP_Receive_Buffer[3] << 8) | (uint8_t)UDP_Receive_Buffer[4];
+                if (receivedValue > 30) {
+                    zyboValue = receivedValue;
+                }
+            }
+
+        }
+        
+    }
     
     switch(appData.clientState) {
+        // Waiting for UDP_Send_Packet to try to send data
         case UDP_TCPIP_WAITING_FOR_COMMAND: {
             SYS_CMD_READY_TO_READ();
             if (UDP_Send_Packet) {
@@ -162,14 +77,15 @@ void _UDP_ClientTasks() {
                     if (!TCPIP_UDP_IsConnected(appData.clientSocket)) 
                     {
                         appData.clientSocket = TCPIP_UDP_ClientOpen(IP_ADDRESS_TYPE_IPV4, port, (IP_MULTI_ADDRESS*) & addr);
-                        
                         break;
                     }
                     if (appData.clientSocket == INVALID_SOCKET) {
                         SYS_CONSOLE_MESSAGE("\r\nClient: Could not start connection\r\n");
                         appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;
                     }
-                    SYS_CONSOLE_MESSAGE("\r\nClient: Starting connection\r\n");
+                    if (UDP_VERBOSE) {
+                        SYS_CONSOLE_MESSAGE("\r\nClient: Starting connection\r\n");
+                    }
                     appData.clientState = UDP_TCPIP_WAIT_FOR_CONNECTION;
                     break;
                 }
@@ -181,35 +97,8 @@ void _UDP_ClientTasks() {
             }
         }
         break;
-
-        case UDP_TCPIP_WAIT_ON_DNS: {
-            IPV4_ADDR addr;
-            switch (_UDP_PumpDNS(UDP_Hostname_Buffer, &addr)) {
-                case -1: {
-                    appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;
-                }
-                break;
-                
-                case 0: {
-                }
-                break;
-                
-                case 1: {
-                    uint16_t port = atoi(UDP_Port_Buffer);
-                    appData.clientSocket = TCPIP_UDP_ClientOpen(IP_ADDRESS_TYPE_IPV4, port, (IP_MULTI_ADDRESS*) &addr);
-                    if (appData.clientSocket == INVALID_SOCKET)
-                    {
-                        SYS_CONSOLE_MESSAGE("\r\nClient: Could not start connection\r\n");
-                        appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;
-                    }
-                    SYS_CONSOLE_MESSAGE("\r\nClient: Starting connection\r\n");
-                    appData.clientState = UDP_TCPIP_WAIT_FOR_CONNECTION;
-                }
-                break;
-            }
-        }
-        break;
-
+        
+        // Send data
         case UDP_TCPIP_WAIT_FOR_CONNECTION: {
             if (!TCPIP_UDP_IsConnected(appData.clientSocket)) {
                 SYS_CONSOLE_MESSAGE("Client: Not connected\r\n");
@@ -217,59 +106,53 @@ void _UDP_ClientTasks() {
             }
             if(TCPIP_UDP_PutIsReady(appData.clientSocket) == 0) {
                 SYS_CONSOLE_MESSAGE("Client: No Space in Stack\r\n");
+                
+                // Connection dropped, hard reset
+                UDP_Initialize();
                 break;
             }
-            SYS_CONSOLE_PRINT("Avail %d\r\n", TCPIP_UDP_PutIsReady(appData.clientSocket));
-            UDP_bytes_to_send = strlen(UDP_Send_Buffer);
-            SYS_CONSOLE_PRINT("Client: Sending %s", UDP_Send_Buffer);
-            TCPIP_UDP_ArrayPut(appData.clientSocket, (uint8_t*)UDP_Send_Buffer, UDP_bytes_to_send);
+            
+            // Determine if we are sending Audio packet or Command packet, command has priority
+            // Build data packet
+            if (packetType == 0) 
+            { // Audio packet type
+                UDP_bytes_to_send = DATA_LEN + SIGNATURE_LEN;
+                
+                // Check response to know what to send
+                if (response == 0) { // Sending first part of 16 bit values
+                    UDP_Send_Buffer[2] = (uint8_t)'F';
+                } else if (response == 1) { // Sending second part of 16 bit values
+                    UDP_Send_Buffer[2] = (uint8_t)'S';
+                } else {
+                    UDP_Send_Buffer[2] = (uint8_t)'W'; // What
+                }
+                
+                TCPIP_UDP_ArrayPut(appData.clientSocket, (uint8_t*)UDP_Send_Buffer, UDP_bytes_to_send);
+            } else if (packetType == 1) { // Command packet type
+                UDP_bytes_to_send = COMMAND_LEN + SIGNATURE_LEN;
+                TCPIP_UDP_ArrayPut(appData.clientSocket, (uint8_t*)UDP_Command_Buffer, UDP_bytes_to_send);
+            }
             
            // Envoie les données (flush = envoie obligatoire des données dans la pile, peu importe la quantité de données)
             TCPIP_UDP_Flush(appData.clientSocket);
-            appData.clientState = UDP_TCPIP_WAIT_FOR_RESPONSE;
-            appData.mTimeOut = SYS_TMR_SystemCountGet() + SYS_TMR_SystemCountFrequencyGet();
-            //SYS_CONSOLE_PRINT("Client: Timeout %lu\n\r", appData.mTimeOut);
-        }
-        break;
-
-        case UDP_TCPIP_WAIT_FOR_RESPONSE: {
-            //char buffer[180];
-            //memset(UDP_Receive_Buffer, 0, sizeof(UDP_Receive_Buffer));
-            if (SYS_TMR_SystemCountGet() > appData.mTimeOut) {
-                SYS_CONSOLE_MESSAGE("\r\nClient: Timeout waiting for response\r\n");
-                TCPIP_UDP_Close(appData.clientSocket);
-                appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;
-                break;
+            response += 1;
+            if (UDP_VERBOSE) {
+                uint32_t diff_ticks = ticks_comm - last_cpu_send;
+                SYS_CONSOLE_PRINT("Delta tick comm %lu\r\n", diff_ticks);
             }
-            if (!TCPIP_UDP_IsConnected(appData.clientSocket)) {
-                SYS_CONSOLE_MESSAGE("\r\nClient: Client Connection Closed\r\n");
-                appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;
-                break;
-            }
-            uint16_t UDP_bytes_received = TCPIP_UDP_GetIsReady(appData.clientSocket);
-            if (UDP_bytes_received) {
-                TCPIP_UDP_ArrayGet(appData.clientSocket, (uint8_t*)UDP_Receive_Buffer, sizeof(UDP_Receive_Buffer)-1);
-                /*
-                     ****** 
-                 */
-                if(UDP_bytes_received > sizeof(UDP_Receive_Buffer)-1){
-                    SYS_CONSOLE_PRINT("\r\nClient: Bytes discarded %u\n\r", UDP_bytes_received - sizeof(UDP_Receive_Buffer)-1);
-                    TCPIP_UDP_Discard(appData.clientSocket);
-                    UDP_bytes_received = sizeof(UDP_Receive_Buffer)-1;
-                }
-                UDP_Receive_Buffer[UDP_bytes_received] = '\0';    //append a null to display strings properly
-                SYS_CONSOLE_PRINT("\r\nClient: Client received %s\r\n", UDP_Receive_Buffer);
-                
-                // Pas de fermeture du socket on veux une connection continue
-                appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;
-            }
+            
+            last_cpu_send = ticks_comm;
+            
+            // Tell rest of the app that data is sent, reset fields
+            dataReady = 0;
+            packetType = 0;
+            appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;
         }
         break;
         
         default:
             break;
     }
-
 }
 
 void _UDP_ServerTasks( void ) {
@@ -455,9 +338,12 @@ void UDP_Tasks ( void )
             break;
 
         default:
+            /*
             // Appelle les fonctions de client et de serveur, si la connection est établie.
             _UDP_ClientTasks(); // roule l'application client
             _UDP_ServerTasks(); // roule l'application serveur (à retirer du code final)
+            */
+            goodClientTasks();
             break;
     }
 }

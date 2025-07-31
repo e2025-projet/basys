@@ -161,7 +161,7 @@ void LCD_WriteByte(unsigned char bData)
 	// Set En
 	lat_LCD_DISP_EN = 1;    
 
-    delay1us(1);
+//    delay1us(1);
 	// Clear En
 	lat_LCD_DISP_EN = 0;
 
@@ -174,7 +174,7 @@ void LCD_WriteByte(unsigned char bData)
     //lat_LCD_DISP_EN = 1;
     /*delay1us(1);
     lat_LCD_DISP_EN = 0;*/
-    delay1us(1);
+//    delay1us(1);
     while(LCD_ReadStatus() & mskBStatus );
 
 }
@@ -204,11 +204,11 @@ unsigned char LCD_ReadByte()
     tris_LCD_DATA |= msk_LCD_DATA;
 	// Set RW
 	lat_LCD_DISP_RW = 1;
-    delay1us(1);
+//    delay1us(1);
 
     // Clear En
 	lat_LCD_DISP_EN = 1;
-    delay1us(1);
+//    delay1us(1);
   	bData = (unsigned char)(prt_LCD_DATA & (unsigned int)msk_LCD_DATA);
 	lat_LCD_DISP_EN = 0;
 	return bData;
@@ -320,7 +320,7 @@ void LCD_InitSequence(unsigned char bDisplaySetOptions)
 
 	//	wait 40 ms
 
-	delay39us(1025);
+//	delay39us(1025);
 	// Function Set
 	LCD_WriteCommand(cmdLcdFcnInit);
 	// Wait ~100 us
@@ -385,7 +385,7 @@ void LCD_DisplaySet(unsigned char bDisplaySetOptions)
 void LCD_DisplayClear()
 {
 	LCD_WriteCommand(cmdLcdClear);
-    delay39us(40);
+//    delay39us(40);
 }
 
 /* ------------------------------------------------------------ */
@@ -488,13 +488,13 @@ void LCD_WriteStringAtPos(char *szLn, unsigned char idxLine, unsigned char idxPo
 	// Set write position
 	unsigned char bAddrOffset = (idxLine == 0 ? 0: 0x40) + idxPos;
 	LCD_SetWriteDdramPosition(bAddrOffset);
-    delay39us(4);
+//    delay39us(4);
 
 	unsigned char bIdx = 0;
 	while(bIdx < len)
 	{
 		LCD_WriteDataByte(szLn[bIdx]);
-        delay39us(2);
+//        delay39us(2);
         //DelayAprox10Us(10 );
 		bIdx++;
 	}
